@@ -1,0 +1,41 @@
+// src/interfaces/http/routes/index.ts
+import { Router } from 'express';
+import { authRouter } from './auth.routes';
+import { transferRouter } from './transfer.routes';
+import { studentRouter } from './student.routes';
+import { academyRouter } from './academy.routes';
+import { guardianRouter } from './guardian.routes';
+import { studentPortalRouter } from './studentPortal.routes';
+import { coachPortalRouter } from './coachPortal.routes';
+import { teamRouter } from './team.routes';
+import { attendanceRouter } from './attendance.routes';
+import { feesRouter } from './fees.routes';
+import { performanceRouter } from './performance.routes';
+import { notificationRouter } from './notification.routes';
+import { scheduleRouter } from './schedule.routes';
+import { selectionRouter } from './selection.routes';
+import { usersRouter } from './users.routes';
+import { financeRouter } from './finance.routes';
+import { dashboardRouter } from './dashboard.routes';
+import { franchiseRouter } from './franchise.routes';
+
+export const apiRouter = Router();
+
+apiRouter.use('/auth', authRouter);
+apiRouter.use('/transfer-wall', transferRouter);
+apiRouter.use('/students', studentRouter);
+apiRouter.use('/academies', academyRouter);
+apiRouter.use('/franchises', franchiseRouter);
+apiRouter.use('/guardian', guardianRouter);
+apiRouter.use('/me', studentPortalRouter);
+apiRouter.use('/coach', coachPortalRouter);
+apiRouter.use('/teams', teamRouter);
+apiRouter.use('/attendance', attendanceRouter);
+apiRouter.use('/fees', feesRouter);
+apiRouter.use('/performance', performanceRouter);
+apiRouter.use('/notifications', notificationRouter);
+apiRouter.use('/schedule', scheduleRouter);
+apiRouter.use('/selection', selectionRouter);
+apiRouter.use('/users', usersRouter);
+apiRouter.use('/finance', financeRouter);
+apiRouter.use('/dashboard', dashboardRouter);
