@@ -12,6 +12,6 @@ selectionRouter.get("/", (req, res, next) => {
 selectionRouter.patch("/:id/status", requirePermission("canManageSelection"), (req, res, next) => {
   req.app.locals.controllers.selection.updateStatus(req, res, next);
 });
-selectionRouter.post("/notify", requirePermission("canManageSelection"), (req, res, next) => {
+selectionRouter.post("/notify", requirePermission("canSendNotifications"), (req, res, next) => {
   req.app.locals.controllers.selection.notifyAll(req, res, next);
 });

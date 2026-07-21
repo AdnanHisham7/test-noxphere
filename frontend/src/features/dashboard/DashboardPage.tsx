@@ -220,7 +220,7 @@ const DashboardPage: React.FC = () => {
         <div className="card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <p className="section-title">Top Performers</p>
-            <Link to="/performance" className="text-xs text-volt-400 hover:underline">Full rankings →</Link>
+            <Link to="/students" className="text-xs text-volt-400 hover:underline">Full rankings →</Link>
           </div>
           {performersLoading ? (
             <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 rounded" />)}</div>

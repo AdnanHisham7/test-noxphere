@@ -3,6 +3,25 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { clsx } from 'clsx';
+import {
+  LayoutDashboard,
+  School,
+  Building2,
+  Users,
+  Wallet,
+  Shirt,
+  Shield,
+  UserCog,
+  CreditCard,
+  Target,
+  Repeat2,
+  CalendarClock,
+  Bell,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  type LucideIcon,
+} from 'lucide-react';
 import { RootState } from '../../store';
 import { clearCredentials } from '../../store/slices/authSlice';
 import { toggleSidebar } from '../../store/slices/uiSlice';
@@ -12,38 +31,37 @@ import { useLogoutMutation } from '../../store/api/authApi';
 interface NavItem {
   path: string;
   label: string;
-  icon: string;
-  permission?: string;
+  icon: LucideIcon;
 }
 
 const navConfig: Record<string, NavItem[]> = {
   super_admin: [
-    { path: '/dashboard', label: 'Dashboard', icon: '⬡' },
-    { path: '/academies', label: 'Academies', icon: '🏫' },
-    { path: '/franchises', label: 'Franchises', icon: '🏢' },
-    { path: '/users', label: 'Users', icon: '👥' },
-    { path: '/finance', label: 'Finance', icon: '💳' },
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/academies', label: 'Academies', icon: School },
+    { path: '/franchises', label: 'Franchises', icon: Building2 },
+    { path: '/users', label: 'Users', icon: Users },
+    { path: '/finance', label: 'Finance', icon: Wallet },
   ],
   manager: [
-    { path: '/dashboard', label: 'Dashboard', icon: '⬡' },
-    { path: '/franchises', label: 'Franchises', icon: '🏢' },
-    { path: '/students', label: 'Squad', icon: '⚽' },
-    { path: '/teams', label: 'Teams', icon: '🛡' },
-    { path: '/coaches', label: 'Coaches', icon: '🧑‍🏫' },
-    { path: '/attendance', label: 'Attendance', icon: '✓' },
-    { path: '/performance', label: 'Performance', icon: '📈' },
-    { path: '/fees', label: 'Fees', icon: '💳' },
-    { path: '/selection', label: 'Selection', icon: '🎯' },
-    { path: '/transfer-wall', label: 'Transfer Wall', icon: '↔' },
-    { path: '/schedule', label: 'Schedule', icon: '📅' },
-    { path: '/notifications', label: 'Alerts', icon: '🔔' },
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/franchises', label: 'Franchises', icon: Building2 },
+    { path: '/students', label: 'Squad', icon: Shirt },
+    { path: '/teams', label: 'Teams', icon: Shield },
+    { path: '/coaches', label: 'Coaches', icon: UserCog },
+    { path: '/fees', label: 'Fees', icon: CreditCard },
+    { path: '/selection', label: 'Selection', icon: Target },
+    { path: '/transfer-wall', label: 'Transfer Wall', icon: Repeat2 },
+    // "Sessions" covers scheduling, viewing, and marking attendance /
+    // performance for every session — those no longer need their own
+    // sidebar entries or pages.
+    { path: '/schedule', label: 'Sessions', icon: CalendarClock },
+    { path: '/notifications', label: 'Alerts', icon: Bell },
   ],
   coach: [
-    { path: '/coach/dashboard', label: 'Dashboard', icon: '⬡' },
-    { path: '/attendance', label: 'Attendance', icon: '✓' },
-    { path: '/performance', label: 'Performance', icon: '📈' },
-    { path: '/selection', label: 'Selection', icon: '🎯' },
-    { path: '/schedule', label: 'Schedule', icon: '📅' },
+    { path: '/coach/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/selection', label: 'Selection', icon: Target },
+    { path: '/schedule', label: 'Sessions', icon: CalendarClock },
+    { path: '/notifications', label: 'Alerts', icon: Bell },
   ],
 };
 
@@ -94,32 +112,35 @@ export const Sidebar: React.FC = () => {
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto no-scrollbar">
         <div className="space-y-0.5 px-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                clsx(
-                  'flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-all duration-150 group',
-                  isActive
-                    ? 'bg-volt-400/10 text-volt-400 border-l-2 border-volt-400 pl-[10px]'
-                    : 'text-slate-500 hover:text-slate-200 hover:bg-white/4 border-l-2 border-transparent'
-                )
-              }
-            >
-              <span className="text-base flex-shrink-0">{item.icon}</span>
-              {!sidebarCollapsed && (
-                <span className="font-body font-medium uppercase tracking-wide text-xs truncate">
-                  {item.label}
-                </span>
-              )}
-              {item.label === 'Alerts' && unreadCount > 0 && !sidebarCollapsed && (
-                <span className="ml-auto bg-ember-500 text-white text-2xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
-                  {unreadCount}
-                </span>
-              )}
-            </NavLink>
-          ))}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  clsx(
+                    'flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-all duration-150 group',
+                    isActive
+                      ? 'bg-volt-400/10 text-volt-400 border-l-2 border-volt-400 pl-[10px]'
+                      : 'text-slate-500 hover:text-slate-200 hover:bg-white/4 border-l-2 border-transparent'
+                  )
+                }
+              >
+                <Icon size={16} className="flex-shrink-0" />
+                {!sidebarCollapsed && (
+                  <span className="font-body font-medium uppercase tracking-wide text-xs truncate">
+                    {item.label}
+                  </span>
+                )}
+                {item.label === 'Alerts' && unreadCount > 0 && !sidebarCollapsed && (
+                  <span className="ml-auto bg-ember-500 text-white text-2xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
 
@@ -141,8 +162,8 @@ export const Sidebar: React.FC = () => {
           </div>
         )}
         {!sidebarCollapsed && (
-          <button onClick={handleLogout} className="text-slate-600 hover:text-ember-400 transition-colors text-sm" title="Logout">
-            ⏻
+          <button onClick={handleLogout} className="text-slate-600 hover:text-ember-400 transition-colors" title="Logout">
+            <LogOut size={15} />
           </button>
         )}
       </div>
@@ -150,9 +171,9 @@ export const Sidebar: React.FC = () => {
       {/* Collapse toggle */}
       <button
         onClick={() => dispatch(toggleSidebar())}
-        className="absolute -right-3 top-20 w-6 h-6 bg-pitch-800 border border-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-volt-400 transition-colors text-xs"
+        className="absolute -right-3 top-20 w-6 h-6 bg-pitch-800 border border-white/10 rounded-full flex items-center justify-center text-slate-500 hover:text-volt-400 transition-colors"
       >
-        {sidebarCollapsed ? '›' : '‹'}
+        {sidebarCollapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
       </button>
     </aside>
   );

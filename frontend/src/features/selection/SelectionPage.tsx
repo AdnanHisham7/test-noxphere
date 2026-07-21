@@ -1,9 +1,11 @@
 // src/features/selection/SelectionPage.tsx
 import React, { useState } from 'react';
 import { clsx } from 'clsx';
-import { Target } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { Target, Send, Download } from 'lucide-react';
 import { Button, Badge, Avatar, Skeleton, EmptyState } from '../../components/ui';
 import { toast } from 'react-hot-toast';
+import { RootState } from '../../store';
 import { useCurrentFranchiseId } from '../../hooks/useCurrentFranchiseId';
 import {
   useGetSelectionListQuery,
@@ -46,6 +48,7 @@ const exportCsv = (rows: SelectionCandidate[]) => {
 
 const SelectionPage: React.FC = () => {
   const franchiseId = useCurrentFranchiseId();
+  const canBroadcast = useSelector((s: RootState) => s.auth.user?.permissions?.canSendNotifications === true);
   const [activePhase, setActivePhase] = useState(0);
   const [selectedPlayer, setSelectedPlayer] = useState<SelectionCandidate | null>(null);
 
@@ -104,10 +107,12 @@ const SelectionPage: React.FC = () => {
           <p className="text-sm text-slate-500 mt-0.5">{list.length} players in evaluation</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" icon={<span>📨</span>} loading={notifying} onClick={handleNotifyAll}>
-            Notify All
-          </Button>
-          <Button size="sm" icon={<span>⬇</span>} disabled={list.length === 0} onClick={() => exportCsv(list)}>
+          {canBroadcast && (
+            <Button variant="secondary" size="sm" icon={<Send size={14} />} loading={notifying} onClick={handleNotifyAll}>
+              Notify All
+            </Button>
+          )}
+          <Button size="sm" icon={<Download size={14} />} disabled={list.length === 0} onClick={() => exportCsv(list)}>
             Export List
           </Button>
         </div>
@@ -267,9 +272,11 @@ const SelectionPage: React.FC = () => {
                 {counts.selected} selected · {counts.shortlisted} shortlisted · {counts.not_selected} released
               </p>
             </div>
-            <Button loading={notifying} onClick={handleNotifyAll}>
-              Notify All Players
-            </Button>
+            {canBroadcast && (
+              <Button loading={notifying} onClick={handleNotifyAll}>
+                Notify All Players
+              </Button>
+            )}
           </div>
         </div>
       )}

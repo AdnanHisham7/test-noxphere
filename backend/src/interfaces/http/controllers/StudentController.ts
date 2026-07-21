@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { StudentUseCases } from '../../../application/use-cases/student/StudentUseCases';
 import { ResponseHandler } from '../../../shared/utils/ResponseHandler';
 import { CreateStudentSchema, UpdateStudentSchema, AddCoachRemarkSchema, ListOnTransferSchema } from '../../../application/dtos/student.dto';
@@ -41,6 +42,14 @@ export class StudentController {
       const dto = UpdateStudentSchema.parse(req.body);
       const student = await this.studentUseCases.updateStudent(req.params.id, dto);
       ResponseHandler.success(res, student, 'Student updated');
+    } catch (err) { next(err); }
+  };
+
+  updatePhoto = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { photo } = z.object({ photo: z.string().url() }).parse(req.body);
+      const student = await this.studentUseCases.updateStudentPhoto(req.params.id, photo);
+      ResponseHandler.success(res, student, 'Photo updated');
     } catch (err) { next(err); }
   };
 
