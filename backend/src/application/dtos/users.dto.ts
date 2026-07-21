@@ -21,6 +21,7 @@ export const UpdateUserSchema = z.object({
     .object({
       canManageUsers: z.boolean().optional(),
       canManageFranchises: z.boolean().optional(),
+      canManageSessions: z.boolean().optional(),
       canManageFinance: z.boolean().optional(),
       canViewReports: z.boolean().optional(),
       canManageAttendance: z.boolean().optional(),

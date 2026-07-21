@@ -3,7 +3,9 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface SessionDocument extends Document {
   franchiseId: mongoose.Types.ObjectId;
-  teamId: mongoose.Types.ObjectId;
+  targetType: "team" | "category";
+  teamId?: mongoose.Types.ObjectId;
+  category?: string;
   coachId: mongoose.Types.ObjectId;
   type: string;
   date: string;
@@ -23,7 +25,18 @@ export interface SessionDocument extends Document {
 const SessionSchema = new Schema<SessionDocument>(
   {
     franchiseId: { type: Schema.Types.ObjectId, ref: "Franchise", required: true, index: true },
-    teamId: { type: Schema.Types.ObjectId, ref: "Team", required: true, index: true },
+    targetType: {
+      type: String,
+      enum: ["team", "category"],
+      default: "team",
+      required: true,
+    },
+    // Exactly one of teamId / category is set, depending on targetType —
+    // enforced in the pre-validate hook below rather than at the schema
+    // level, since Mongoose can't express "required if sibling field
+    // equals X" declaratively.
+    teamId: { type: Schema.Types.ObjectId, ref: "Team", index: true },
+    category: { type: String, index: true },
     coachId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     type: {
       type: String,
@@ -59,6 +72,18 @@ const SessionSchema = new Schema<SessionDocument>(
   },
 );
 
+SessionSchema.pre("validate", function (this: SessionDocument, next) {
+  if (this.targetType === "team" && !this.teamId) {
+    next(new Error("teamId is required when targetType is 'team'"));
+    return;
+  }
+  if (this.targetType === "category" && !this.category) {
+    next(new Error("category is required when targetType is 'category'"));
+    return;
+  }
+  next();
+});
+
 SessionSchema.pre(/^find/, function (this: mongoose.Query<unknown, SessionDocument>, next) {
   this.where({ deletedAt: { $exists: false } });
   next();
@@ -66,5 +91,6 @@ SessionSchema.pre(/^find/, function (this: mongoose.Query<unknown, SessionDocume
 
 SessionSchema.index({ franchiseId: 1, date: 1 });
 SessionSchema.index({ teamId: 1, date: 1 });
+SessionSchema.index({ franchiseId: 1, category: 1, date: 1 });
 
 export const SessionModel = mongoose.model<SessionDocument>("Session", SessionSchema);

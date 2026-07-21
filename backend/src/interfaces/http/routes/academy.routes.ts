@@ -39,9 +39,13 @@ academyRouter.put(
   },
 );
 
+// Config updates (which includes skillParameters) may also be made by a
+// manager, but only for their own academy — ownership is enforced inside
+// AcademyUseCases.updateAcademyConfig, not here, since it requires
+// resolving the manager's franchise -> academy relationship.
 academyRouter.patch(
   "/:id/config",
-  authorize("super_admin"),
+  authorize("super_admin", "manager"),
   validate(AcademyConfigSchema),
   (req, res, next) => {
     req.app.locals.controllers.academy.updateConfig(req, res, next);

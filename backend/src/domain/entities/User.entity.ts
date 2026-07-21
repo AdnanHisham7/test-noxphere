@@ -4,6 +4,7 @@ export type UserRole = 'super_admin' | 'manager' | 'coach' | 'student' | 'guardi
 export interface UserPermissions {
   canManageUsers: boolean;
   canManageFranchises: boolean;
+  canManageSessions: boolean;
   canManageFinance: boolean;
   canViewReports: boolean;
   canManageAttendance: boolean;
@@ -36,6 +37,7 @@ export const defaultPermissions: Record<UserRole, UserPermissions> = {
   super_admin: {
     canManageUsers: true,
     canManageFranchises: true,
+    canManageSessions: true,
     canManageFinance: true,
     canViewReports: true,
     canManageAttendance: true,
@@ -45,7 +47,8 @@ export const defaultPermissions: Record<UserRole, UserPermissions> = {
   },
   manager: {
     canManageUsers: true,
-    canManageFranchises: false,
+    canManageFranchises: true,
+    canManageSessions: true,
     canManageFinance: true,
     canViewReports: true,
     canManageAttendance: true,
@@ -56,16 +59,18 @@ export const defaultPermissions: Record<UserRole, UserPermissions> = {
   coach: {
     canManageUsers: false,
     canManageFranchises: false,
+    canManageSessions: true,
     canManageFinance: false,
     canViewReports: false,
     canManageAttendance: true,
     canManagePerformance: true,
-    canManageSelection: false,
+    canManageSelection: true,
     canSendNotifications: false,
   },
   student: {
     canManageUsers: false,
     canManageFranchises: false,
+    canManageSessions: false,
     canManageFinance: false,
     canViewReports: false,
     canManageAttendance: false,
@@ -76,6 +81,7 @@ export const defaultPermissions: Record<UserRole, UserPermissions> = {
   guardian: {
     canManageUsers: false,
     canManageFranchises: false,
+    canManageSessions: false,
     canManageFinance: false,
     canViewReports: false,
     canManageAttendance: false,

@@ -12,6 +12,7 @@ const PermissionsSchema = new Schema(
   {
     canManageUsers: { type: Boolean, default: false },
     canManageFranchises: { type: Boolean, default: false },
+    canManageSessions: { type: Boolean, default: false },
     canManageFinance: { type: Boolean, default: false },
     canViewReports: { type: Boolean, default: false },
     canManageAttendance: { type: Boolean, default: false },

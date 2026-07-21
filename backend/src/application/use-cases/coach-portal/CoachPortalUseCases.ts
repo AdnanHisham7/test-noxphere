@@ -58,7 +58,8 @@ export class CoachPortalUseCases {
 
     const toCard = (s: any) => ({
       id: s._id.toString(),
-      teamName: s.teamId?.name ?? "Team",
+      targetType: s.targetType ?? "team",
+      teamName: s.targetType === "category" ? (s.category ?? "Category") : (s.teamId?.name ?? "Team"),
       type: s.type,
       date: s.date,
       startTime: s.startTime,

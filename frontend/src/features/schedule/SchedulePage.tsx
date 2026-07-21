@@ -1,12 +1,15 @@
 // src/features/schedule/SchedulePage.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Plus, MapPin, Trash2, Bell } from "lucide-react";
+import { useSelector } from "react-redux";
+import { CalendarDays, Plus, MapPin, Trash2, Bell, Users, Layers } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Button, Card, Badge, Modal, Input, Skeleton, EmptyState } from "../../components/ui";
+import { RootState } from "../../store";
 import { useCurrentFranchiseId } from "../../hooks/useCurrentFranchiseId";
 import { useListTeamsQuery } from "../../store/api/teamsApi";
 import { useGetUsersQuery } from "../../store/api/usersApi";
+import { useGetFranchiseByIdQuery } from "../../store/api/franchiseApi";
 import {
   useGetSessionsQuery,
   useCreateSessionMutation,
@@ -36,22 +39,31 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 const SchedulePage: React.FC = () => {
   const franchiseId = useCurrentFranchiseId();
   const navigate = useNavigate();
+  const { user } = useSelector((s: RootState) => s.auth);
+  const isCoach = user?.role === "coach";
+  const canBroadcast = user?.permissions?.canSendNotifications === true;
+  const canHardDelete = user?.role === "super_admin" || user?.role === "manager";
 
   const [dateFilter, setDateFilter] = useState<"all" | string>("all");
   const [showCreate, setShowCreate] = useState(false);
   const [locationModalSession, setLocationModalSession] = useState<Session | null>(null);
   const [cancelModalSession, setCancelModalSession] = useState<Session | null>(null);
 
-  const { data: teams } = useListTeamsQuery({ franchiseId: franchiseId ?? "" }, { skip: !franchiseId });
+  const { data: allTeams } = useListTeamsQuery({ franchiseId: franchiseId ?? "" }, { skip: !franchiseId });
+  // A coach only ever schedules for the team(s) they've been assigned —
+  // not every team in the franchise.
+  const teams = isCoach ? (allTeams ?? []).filter((t) => t.coach?._id === user?.id) : allTeams ?? [];
+  const { data: franchise } = useGetFranchiseByIdQuery(franchiseId ?? "", { skip: !franchiseId });
   const { data: coachesResult } = useGetUsersQuery(
     { roles: "coach", franchiseId: franchiseId ?? "", isActive: "true", limit: 100 },
-    { skip: !franchiseId },
+    { skip: !franchiseId || isCoach },
   );
   const coaches = coachesResult?.data ?? [];
 
   const { data: sessions = [], isLoading, isError } = useGetSessionsQuery(
     {
       franchiseId: franchiseId ?? "",
+      ...(isCoach && user?.id ? { coachId: user.id } : {}),
       ...(dateFilter !== "all" && { from: dateFilter, to: dateFilter }),
     },
     { skip: !franchiseId },
@@ -106,14 +118,16 @@ const SchedulePage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            icon={<Bell size={16} />}
-            loading={alerting}
-            onClick={handleAlertAll}
-          >
-            Alert all guardians
-          </Button>
+          {canBroadcast && (
+            <Button
+              variant="secondary"
+              icon={<Bell size={16} />}
+              loading={alerting}
+              onClick={handleAlertAll}
+            >
+              Alert all guardians
+            </Button>
+          )}
           <Button icon={<Plus size={16} />} onClick={() => setShowCreate(true)}>
             New session
           </Button>
@@ -180,9 +194,22 @@ const SchedulePage: React.FC = () => {
                   />
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-display font-bold text-white uppercase tracking-wide">
-                        {session.teamName ?? "Team"}
+                      <h3 className="font-display font-bold text-white uppercase tracking-wide flex items-center gap-1.5">
+                        {session.targetType === "category" ? (
+                          <>
+                            <Layers size={14} className="text-volt-400" />
+                            {session.category ?? "Category"}
+                          </>
+                        ) : (
+                          <>
+                            <Users size={14} className="text-volt-400" />
+                            {session.teamName ?? "Team"}
+                          </>
+                        )}
                       </h3>
+                      {session.targetType === "category" && (
+                        <Badge variant="blue" size="sm">Category</Badge>
+                      )}
                       <Badge variant="gray" size="sm">{TYPE_LABEL[session.type]}</Badge>
                       <Badge variant={STATUS_VARIANT[session.status]} size="sm">
                         {session.status}
@@ -229,13 +256,15 @@ const SchedulePage: React.FC = () => {
                       </button>
                     </>
                   )}
-                  <button
-                    onClick={() => handleDelete(session.id)}
-                    className="text-slate-500 hover:text-ember-400 transition-colors p-1"
-                    aria-label="Delete session"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {canHardDelete && (
+                    <button
+                      onClick={() => handleDelete(session.id)}
+                      className="text-slate-500 hover:text-ember-400 transition-colors p-1"
+                      aria-label="Delete session"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -247,15 +276,18 @@ const SchedulePage: React.FC = () => {
         <CreateSessionModal
           franchiseId={franchiseId}
           teams={teams ?? []}
+          categories={franchise?.ageGroups ?? []}
           coaches={coaches}
+          isCoach={isCoach}
+          currentUser={user ? { id: user.id, firstName: user.firstName, lastName: user.lastName } : undefined}
           onClose={() => setShowCreate(false)}
           onCreate={async (input) => {
             try {
               await createSession(input).unwrap();
               toast.success("Session scheduled");
               setShowCreate(false);
-            } catch {
-              toast.error("Couldn't schedule session — try again");
+            } catch (err: any) {
+              toast.error(err?.data?.message || "Couldn't schedule session — try again");
             }
           }}
           creating={creating}
@@ -303,17 +335,22 @@ const SchedulePage: React.FC = () => {
 const CreateSessionModal: React.FC<{
   franchiseId: string;
   teams: { id: string; name: string; coach?: { _id: string; firstName: string; lastName: string } }[];
+  categories: string[];
   coaches: { id: string; firstName: string; lastName: string }[];
+  isCoach: boolean;
+  currentUser?: { id: string; firstName: string; lastName: string };
   onClose: () => void;
   onCreate: (input: {
-    franchiseId: string; teamId: string; coachId: string; type: Session["type"];
-    date: string; startTime: string; endTime: string; location: string; fieldNumber?: string;
+    franchiseId: string; targetType: "team" | "category"; teamId?: string; category?: string; coachId?: string;
+    type: Session["type"]; date: string; startTime: string; endTime: string; location: string; fieldNumber?: string;
   }) => void;
   creating: boolean;
-}> = ({ franchiseId, teams, coaches, onClose, onCreate, creating }) => {
+}> = ({ franchiseId, teams, categories, coaches, isCoach, currentUser, onClose, onCreate, creating }) => {
+  const [targetType, setTargetType] = useState<"team" | "category">(teams.length > 0 ? "team" : "category");
   const [teamId, setTeamId] = useState(teams[0]?.id ?? "");
+  const [category, setCategory] = useState(categories[0] ?? "");
   const selectedTeam = teams.find((t) => t.id === teamId);
-  const [coachId, setCoachId] = useState(selectedTeam?.coach?._id ?? "");
+  const [coachId, setCoachId] = useState(isCoach ? currentUser?.id ?? "" : selectedTeam?.coach?._id ?? "");
   const [type, setType] = useState<Session["type"]>("training");
   const [date, setDate] = useState(todayStr());
   const [startTime, setStartTime] = useState("16:00");
@@ -323,13 +360,27 @@ const CreateSessionModal: React.FC<{
 
   const handleTeamChange = (id: string) => {
     setTeamId(id);
-    const t = teams.find((tm) => tm.id === id);
-    setCoachId(t?.coach?._id ?? "");
+    if (!isCoach) {
+      const t = teams.find((tm) => tm.id === id);
+      setCoachId(t?.coach?._id ?? "");
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!teamId || !coachId || !location || !date || !startTime || !endTime) {
+    if (targetType === "team" && !teamId) {
+      toast.error("Select a team");
+      return;
+    }
+    if (targetType === "category" && !category) {
+      toast.error("Select a category");
+      return;
+    }
+    if (!isCoach && !coachId) {
+      toast.error("Select a coach");
+      return;
+    }
+    if (!location || !date || !startTime || !endTime) {
       toast.error("Fill in all required fields");
       return;
     }
@@ -337,13 +388,28 @@ const CreateSessionModal: React.FC<{
       toast.error("End time must be after start time");
       return;
     }
-    onCreate({ franchiseId, teamId, coachId, type, date, startTime, endTime, location, fieldNumber: fieldNumber || undefined });
+    onCreate({
+      franchiseId,
+      targetType,
+      teamId: targetType === "team" ? teamId : undefined,
+      category: targetType === "category" ? category : undefined,
+      coachId: isCoach ? currentUser?.id : coachId,
+      type,
+      date,
+      startTime,
+      endTime,
+      location,
+      fieldNumber: fieldNumber || undefined,
+    });
   };
 
-  if (teams.length === 0) {
+  if (teams.length === 0 && categories.length === 0) {
     return (
       <Modal isOpen onClose={onClose} title="New session" size="sm">
-        <EmptyState title="No teams yet" description="Create a team first from the Teams page before scheduling sessions." />
+        <EmptyState
+          title="No teams or categories yet"
+          description={isCoach ? "You aren't assigned to a team yet — ask your manager to assign one." : "Create a team, or configure age-group categories on this franchise, before scheduling sessions."}
+        />
       </Modal>
     );
   }
@@ -352,22 +418,71 @@ const CreateSessionModal: React.FC<{
     <Modal isOpen onClose={onClose} title="New session" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Team</label>
-          <select value={teamId} onChange={(e) => handleTeamChange(e.target.value)} className="input !w-full">
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
+          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Schedule for</label>
+          <div className="flex items-center gap-1 bg-pitch-800 p-1 rounded border border-white/5 w-fit">
+            {(["team", "category"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTargetType(t)}
+                className={
+                  targetType === t
+                    ? "px-4 py-1.5 rounded text-xs font-display font-bold uppercase tracking-wide bg-volt-400 text-pitch-900 flex items-center gap-1.5"
+                    : "px-4 py-1.5 rounded text-xs font-display font-bold uppercase tracking-wide text-slate-500 hover:text-white flex items-center gap-1.5"
+                }
+              >
+                {t === "team" ? <Users size={12} /> : <Layers size={12} />}
+                {t === "team" ? "A team" : "A category"}
+              </button>
             ))}
-          </select>
+          </div>
+          <p className="text-2xs text-slate-500 mt-1.5">
+            {targetType === "team"
+              ? "Only players on this team are assigned to the session."
+              : "Every active player in this age group is assigned — including players not yet on a team."}
+          </p>
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Coach</label>
-          <select value={coachId} onChange={(e) => setCoachId(e.target.value)} className="input !w-full" required>
-            <option value="">Select a coach</option>
-            {coaches.map((c) => (
-              <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
-            ))}
-          </select>
-        </div>
+
+        {targetType === "team" ? (
+          teams.length === 0 ? (
+            <EmptyState
+              title={isCoach ? "No team assigned" : "No teams yet"}
+              description={isCoach ? "Ask your manager to assign you to a team." : "Create a team first from the Teams page."}
+            />
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Team</label>
+              <select value={teamId} onChange={(e) => handleTeamChange(e.target.value)} className="input !w-full">
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )
+        ) : categories.length === 0 ? (
+          <EmptyState title="No categories configured" description="Add age groups to this franchise first (Franchises page)." />
+        ) : (
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Category</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="input !w-full">
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {!isCoach && (
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Coach</label>
+            <select value={coachId} onChange={(e) => setCoachId(e.target.value)} className="input !w-full" required>
+              <option value="">Select a coach</option>
+              {coaches.map((c) => (
+                <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Session type</label>
           <select value={type} onChange={(e) => setType(e.target.value as Session["type"])} className="input !w-full">

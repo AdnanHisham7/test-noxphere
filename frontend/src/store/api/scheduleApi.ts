@@ -4,7 +4,8 @@ import { baseApi } from "./baseApi";
 export interface Session {
   id: string;
   franchiseId: string;
-  teamId: string;
+  targetType: "team" | "category";
+  teamId?: string;
   teamName?: string;
   category?: string;
   categoryColor?: string;
@@ -25,8 +26,10 @@ export interface Session {
 
 export interface CreateSessionInput {
   franchiseId: string;
-  teamId: string;
-  coachId: string;
+  targetType: "team" | "category";
+  teamId?: string;
+  category?: string;
+  coachId?: string;
   type: Session["type"];
   date: string;
   startTime: string;
@@ -53,6 +56,7 @@ export interface RosterPlayer {
 
 export interface SessionRoster {
   session: Session;
+  skillParameters: string[];
   roster: RosterPlayer[];
 }
 

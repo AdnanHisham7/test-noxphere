@@ -17,14 +17,17 @@ export class ScheduleController {
 
   list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { franchiseId, from, to, teamId, coachId, status } = req.query;
+      const { franchiseId, from, to, teamId, status } = req.query;
       if (!franchiseId) throw new BadRequestError("franchiseId is required");
+      // A coach only ever sees their own sessions — regardless of what
+      // (if anything) was passed in the coachId query param.
+      const coachId = req.user!.role === "coach" ? req.user!.sub : (req.query.coachId as string);
       const sessions = await this.scheduleUseCases.listSessions({
         franchiseId: franchiseId as string,
         from: from as string,
         to: to as string,
         teamId: teamId as string,
-        coachId: coachId as string,
+        coachId,
         status: status as string,
       });
       ResponseHandler.success(res, sessions, "Sessions retrieved");
@@ -45,7 +48,12 @@ export class ScheduleController {
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto = CreateSessionSchema.parse(req.body);
-      const session = await this.scheduleUseCases.createSession(dto, req.user!.sub);
+      // A coach can never schedule a session under someone else's name —
+      // the logged-in coach is always the coach. A manager/super_admin
+      // must explicitly pick one.
+      const coachId = req.user!.role === "coach" ? req.user!.sub : dto.coachId;
+      if (!coachId) throw new BadRequestError("coachId is required");
+      const session = await this.scheduleUseCases.createSession({ ...dto, coachId }, req.user!.sub);
       ResponseHandler.created(res, session, "Session scheduled");
     } catch (err) {
       next(err);
@@ -55,6 +63,7 @@ export class ScheduleController {
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto = UpdateSessionSchema.parse(req.body);
+      if (req.user!.role === "coach") delete dto.coachId;
       const session = await this.scheduleUseCases.updateSession(req.params.id, dto);
       ResponseHandler.success(res, session, "Session updated");
     } catch (err) {

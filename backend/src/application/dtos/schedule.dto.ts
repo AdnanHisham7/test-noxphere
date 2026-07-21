@@ -1,10 +1,20 @@
 // src/application/dtos/schedule.dto.ts
 import { z } from "zod";
 
-export const CreateSessionSchema = z.object({
+const SessionBaseSchema = z.object({
   franchiseId: z.string().min(1),
-  teamId: z.string().min(1),
-  coachId: z.string().min(1),
+  // A session is scheduled either for one specific team, or for every
+  // student in an age-group category across the franchise (including
+  // students who aren't on any team yet). Exactly one of teamId/category
+  // is required, enforced by the refinement on CreateSessionSchema below.
+  targetType: z.enum(["team", "category"]).default("team"),
+  teamId: z.string().min(1).optional(),
+  category: z.string().min(1).optional(),
+  // Optional here: a coach scheduling their own session never sends this —
+  // the controller always overrides it with the logged-in coach's id. A
+  // manager/super_admin must supply it; that's enforced in the use-case,
+  // not here, since it depends on who's making the request.
+  coachId: z.string().min(1).optional(),
   type: z.enum(["training", "match", "trial", "fitness"]).default("training"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
   startTime: z.string().regex(/^\d{2}:\d{2}$/, "startTime must be HH:MM"),
@@ -14,7 +24,15 @@ export const CreateSessionSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const UpdateSessionSchema = CreateSessionSchema.partial().extend({
+export const CreateSessionSchema = SessionBaseSchema.refine(
+  (data) => (data.targetType === "team" ? !!data.teamId : !!data.category),
+  {
+    message: "Select a team for a team session, or a category for a category session",
+    path: ["teamId"],
+  },
+);
+
+export const UpdateSessionSchema = SessionBaseSchema.partial().extend({
   status: z.enum(["upcoming", "ongoing", "completed", "cancelled"]).optional(),
 });
 

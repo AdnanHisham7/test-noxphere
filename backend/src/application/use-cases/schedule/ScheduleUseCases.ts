@@ -5,6 +5,8 @@ import { TeamModel } from "../../../infrastructure/database/models/Team.model";
 import { StudentModel } from "../../../infrastructure/database/models/Student.model";
 import { AttendanceModel } from "../../../infrastructure/database/models/Attendance.model";
 import { PerformanceModel } from "../../../infrastructure/database/models/Performance.model";
+import { FranchiseModel } from "../../../infrastructure/database/models/Franchise.model";
+import { AcademyModel } from "../../../infrastructure/database/models/Academy.model";
 import { notificationService } from "../../../infrastructure/services/NotificationService";
 import { NotFoundError, BadRequestError } from "../../../shared/errors/AppError";
 import {
@@ -32,8 +34,11 @@ function toCard(doc: any) {
   return {
     id: json.id,
     franchiseId: json.franchiseId?.toString ? json.franchiseId.toString() : json.franchiseId,
-    teamId: json.teamId?._id ? json.teamId._id.toString() : json.teamId?.toString?.() ?? json.teamId,
-    category: json.teamId?.ageGroup ?? undefined,
+    targetType: json.targetType ?? "team",
+    teamId: json.teamId?._id
+      ? json.teamId._id.toString()
+      : json.teamId?.toString?.() ?? json.teamId ?? undefined,
+    category: json.category ?? json.teamId?.ageGroup ?? undefined,
     teamName: json.teamId?.name ?? undefined,
     categoryColor: "#ccff00",
     coach: json.coachId?.firstName
@@ -90,12 +95,47 @@ export class ScheduleUseCases {
   }
 
   async createSession(dto: CreateSessionDto, createdBy: string) {
-    const team = await TeamModel.findById(dto.teamId);
-    if (!team) throw new NotFoundError("Team");
     if (dto.endTime <= dto.startTime) {
       throw new BadRequestError("endTime must be after startTime");
     }
-    const session = await SessionModel.create({ ...dto, createdBy, status: "upcoming" });
+    if (!dto.coachId) {
+      throw new BadRequestError("coachId is required");
+    }
+
+    if (dto.targetType === "category") {
+      if (!dto.category) throw new BadRequestError("category is required for a category session");
+      const franchise = await FranchiseModel.findById(dto.franchiseId).select("ageGroups").lean();
+      if (!franchise) throw new NotFoundError("Franchise");
+      if (franchise.ageGroups?.length && !franchise.ageGroups.includes(dto.category)) {
+        throw new BadRequestError(
+          `"${dto.category}" isn't one of this franchise's configured age groups (${franchise.ageGroups.join(", ")})`,
+        );
+      }
+    } else {
+      if (!dto.teamId) throw new BadRequestError("teamId is required for a team session");
+      const team = await TeamModel.findById(dto.teamId);
+      if (!team) throw new NotFoundError("Team");
+      if (team.franchiseId.toString() !== dto.franchiseId) {
+        throw new BadRequestError("That team doesn't belong to this franchise");
+      }
+    }
+
+    const session = await SessionModel.create({
+      franchiseId: dto.franchiseId,
+      targetType: dto.targetType,
+      teamId: dto.targetType === "team" ? dto.teamId : undefined,
+      category: dto.targetType === "category" ? dto.category : undefined,
+      coachId: dto.coachId,
+      type: dto.type,
+      date: dto.date,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      location: dto.location,
+      fieldNumber: dto.fieldNumber,
+      notes: dto.notes,
+      createdBy,
+      status: "upcoming",
+    });
     const populated = await SessionModel.findById(session.id)
       .populate("teamId", "name ageGroup")
       .populate("coachId", "firstName lastName");
@@ -122,7 +162,7 @@ export class ScheduleUseCases {
     session.status = "cancelled";
     session.cancelReason = dto.reason;
     await session.save();
-    await this.notifyTeamGuardians(session.teamId.toString(), {
+    await this.notifySessionGuardians(session, {
       title: "Session cancelled",
       body: `The ${session.date} session at ${session.location} has been cancelled. Reason: ${dto.reason}`,
       type: "session_location_change",
@@ -146,7 +186,7 @@ export class ScheduleUseCases {
     await session.save();
 
     if (dto.notifyGuardians) {
-      await this.notifyTeamGuardians(session.teamId.toString(), {
+      await this.notifySessionGuardians(session, {
         title: "Session location changed",
         body: `The ${session.date} session is now at ${dto.location}${dto.fieldNumber ? ` (${dto.fieldNumber})` : ""}.`,
         type: "session_location_change",
@@ -176,6 +216,23 @@ export class ScheduleUseCases {
   }
 
   /**
+   * Performance skill parameters are owned by the Academy record (defined
+   * there by the manager), not by the Franchise — every session belongs to
+   * a franchise, and every franchise belongs to exactly one academy, so we
+   * resolve franchise -> academy to find the parameter list that's allowed
+   * to be scored against. Falls back to the platform default set if
+   * somehow neither record carries any (keeps old data / dev fixtures
+   * from hard-failing).
+   */
+  private async getSkillParametersForFranchise(franchiseId: mongoose.Types.ObjectId | string): Promise<string[]> {
+    const franchise = await FranchiseModel.findById(franchiseId).select("academyId").lean();
+    if (!franchise) throw new NotFoundError("Franchise");
+    const academy = await AcademyModel.findById(franchise.academyId).select("skillParameters").lean();
+    if (academy?.skillParameters?.length) return academy.skillParameters;
+    return ["Dribbling", "Passing", "Shooting", "Speed", "Tactical Awareness", "Attitude"];
+  }
+
+  /**
    * The roster for a session: every student on that session's team, merged
    * with whatever attendance/performance has already been recorded for
    * this exact session (so re-opening a partially-marked session shows
@@ -187,20 +244,27 @@ export class ScheduleUseCases {
       .populate("coachId", "firstName lastName");
     if (!session) throw new NotFoundError("Session");
 
-    const students = await StudentModel.find({ teamId: session.teamId, isActive: true })
-      .select("firstName lastName photo position jerseyNumber")
+    const studentQuery =
+      session.targetType === "category"
+        ? { franchiseId: session.franchiseId, ageGroup: session.category, isActive: true }
+        : { teamId: session.teamId, isActive: true };
+
+    const students = await StudentModel.find(studentQuery)
+      .select("firstName lastName photo position jerseyNumber teamId")
       .sort({ firstName: 1 })
       .lean();
 
-    const [attendance, performance] = await Promise.all([
+    const [attendance, performance, skillParameters] = await Promise.all([
       AttendanceModel.find({ sessionId }).lean(),
       PerformanceModel.find({ sessionId }).lean(),
+      this.getSkillParametersForFranchise(session.franchiseId),
     ]);
     const attendanceByStudent = new Map(attendance.map((a) => [a.studentId.toString(), a]));
     const performanceByStudent = new Map(performance.map((p) => [p.studentId.toString(), p]));
 
     return {
       session: toCard(session),
+      skillParameters,
       roster: students.map((s) => {
         const att = attendanceByStudent.get(s._id.toString());
         const perf = performanceByStudent.get(s._id.toString());
@@ -236,6 +300,14 @@ export class ScheduleUseCases {
       throw new BadRequestError("This session was cancelled — attendance can't be marked for it");
     }
 
+    const studentTeamMap = new Map<string, mongoose.Types.ObjectId | undefined>();
+    if (session.targetType === "category") {
+      const students = await StudentModel.find({ _id: { $in: records.map((r) => r.studentId) } })
+        .select("teamId")
+        .lean();
+      for (const s of students) studentTeamMap.set(s._id.toString(), s.teamId);
+    }
+
     const ops = records.map((r) => ({
       updateOne: {
         filter: {
@@ -246,7 +318,7 @@ export class ScheduleUseCases {
           $set: {
             studentId: new mongoose.Types.ObjectId(r.studentId),
             franchiseId: session.franchiseId,
-            teamId: session.teamId,
+            teamId: session.targetType === "team" ? session.teamId : studentTeamMap.get(r.studentId),
             coachId: new mongoose.Types.ObjectId(coachId),
             sessionId: new mongoose.Types.ObjectId(sessionId),
             sessionDate: new Date(session.date),
@@ -311,9 +383,28 @@ export class ScheduleUseCases {
       throw new BadRequestError("This session was cancelled — performance can't be logged for it");
     }
 
+    const allowedParameters = await this.getSkillParametersForFranchise(session.franchiseId);
+    const allowedSet = new Set(allowedParameters);
+
+    const studentTeamMap = new Map<string, mongoose.Types.ObjectId | undefined>();
+    if (session.targetType === "category") {
+      const students = await StudentModel.find({ _id: { $in: records.map((r) => r.studentId) } })
+        .select("teamId")
+        .lean();
+      for (const s of students) studentTeamMap.set(s._id.toString(), s.teamId);
+    }
+
     for (const r of records) {
       if (!r.skillScores.length) {
         throw new BadRequestError(`At least one skill score is required for student ${r.studentId}`);
+      }
+      const invalidParams = r.skillScores
+        .map((s) => s.parameter)
+        .filter((p) => !allowedSet.has(p));
+      if (invalidParams.length) {
+        throw new BadRequestError(
+          `Invalid skill parameter(s) for this academy: ${invalidParams.join(", ")}. Allowed: ${allowedParameters.join(", ")}`,
+        );
       }
       const overallScore =
         r.skillScores.reduce((sum, s) => sum + s.score, 0) / r.skillScores.length;
@@ -324,7 +415,7 @@ export class ScheduleUseCases {
           $set: {
             studentId: r.studentId,
             franchiseId: session.franchiseId,
-            teamId: session.teamId,
+            teamId: session.targetType === "team" ? session.teamId : studentTeamMap.get(r.studentId),
             coachId,
             sessionId,
             sessionDate: new Date(session.date),
@@ -362,11 +453,15 @@ export class ScheduleUseCases {
     return this.getSessionRoster(sessionId);
   }
 
-  private async notifyTeamGuardians(
-    teamId: string,
+  private async notifySessionGuardians(
+    session: { targetType: string; teamId?: mongoose.Types.ObjectId; category?: string; franchiseId: mongoose.Types.ObjectId },
     opts: { title: string; body: string; type: "session_location_change" },
   ) {
-    const students = await StudentModel.find({ teamId, isActive: true });
+    const query =
+      session.targetType === "category"
+        ? { franchiseId: session.franchiseId, ageGroup: session.category, isActive: true }
+        : { teamId: session.teamId, isActive: true };
+    const students = await StudentModel.find(query);
     const guardianIds = Array.from(
       new Set(students.flatMap((s) => s.guardianIds.map((g) => g.toString()))),
     );

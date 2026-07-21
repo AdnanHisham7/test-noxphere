@@ -1,7 +1,7 @@
 // src/features/franchises/FranchiseManagementPage.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { Building2, Plus, Power, Trash2 } from "lucide-react";
+import { Building2, Plus, Power, Trash2, ListChecks, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useSelector } from "react-redux";
 import { Button, Input, Badge, Modal, Skeleton, EmptyState } from "../../components/ui";
@@ -106,6 +106,8 @@ const FranchiseManagementPage: React.FC = () => {
           description={isSuperAdmin ? "Choose an academy above to see its franchises." : "Your account isn't linked to an academy yet."}
         />
       )}
+
+      {activeAcademyId && <SkillParametersCard academyId={activeAcademyId} />}
 
       {activeAcademyId && isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -226,6 +228,98 @@ const CreateFranchiseModal: React.FC<{
         </div>
       </form>
     </Modal>
+  );
+};
+
+const SkillParametersCard: React.FC<{ academyId: string }> = ({ academyId }) => {
+  const { data: academy, isLoading } = academyApi.useGetAcademyByIdQuery(academyId, { skip: !academyId });
+  const [updateConfig, { isLoading: saving }] = academyApi.useUpdateAcademyConfigMutation();
+
+  const [skills, setSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState("");
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    if (academy && !dirty) setSkills(academy.skillParameters ?? []);
+  }, [academy, dirty]);
+
+  const addSkill = () => {
+    const trimmed = newSkill.trim();
+    if (!trimmed) return;
+    if (skills.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("That skill parameter already exists");
+      return;
+    }
+    setSkills((prev) => [...prev, trimmed]);
+    setNewSkill("");
+    setDirty(true);
+  };
+
+  const removeSkill = (idx: number) => {
+    setSkills((prev) => prev.filter((_, i) => i !== idx));
+    setDirty(true);
+  };
+
+  const handleSave = async () => {
+    if (skills.length === 0) {
+      toast.error("Keep at least one skill parameter — coaches need something to score against");
+      return;
+    }
+    try {
+      await updateConfig({ id: academyId, config: { skillParameters: skills } }).unwrap();
+      toast.success("Skill parameters updated");
+      setDirty(false);
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Couldn't update skill parameters — try again");
+    }
+  };
+
+  if (isLoading) return <Skeleton className="h-32 rounded-lg" />;
+  if (!academy) return null;
+
+  return (
+    <div className="card p-5 space-y-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <ListChecks size={16} className="text-volt-400" />
+          <div>
+            <p className="font-display font-bold text-white text-sm uppercase tracking-wide">Skill Parameters</p>
+            <p className="text-2xs text-slate-500 mt-0.5">
+              Coaches can only score players against these — used whenever performance is marked for a session.
+            </p>
+          </div>
+        </div>
+        {dirty && (
+          <Button size="sm" loading={saving} onClick={handleSave}>Save changes</Button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2 p-3 bg-white/5 rounded border border-white/5">
+        {skills.map((skill, idx) => (
+          <div key={`${skill}-${idx}`} className="flex items-center gap-2 bg-pitch-700 px-2 py-1 rounded text-xs text-white">
+            {skill}
+            <button type="button" className="text-ember-400 hover:text-ember-300" onClick={() => removeSkill(idx)}>
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+        {skills.length === 0 && <p className="text-2xs text-slate-500">No skill parameters yet — add at least one below.</p>}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          className="input flex-1"
+          placeholder="e.g. First Touch"
+          value={newSkill}
+          onChange={(e) => setNewSkill(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addSkill();
+            }
+          }}
+        />
+        <Button type="button" variant="secondary" icon={<Plus size={14} />} onClick={addSkill}>Add</Button>
+      </div>
+    </div>
   );
 };
 

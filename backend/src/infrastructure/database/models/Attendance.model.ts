@@ -4,7 +4,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface AttendanceDocument extends Document {
   studentId: mongoose.Types.ObjectId;
   franchiseId: mongoose.Types.ObjectId;
-  teamId: mongoose.Types.ObjectId;
+  teamId?: mongoose.Types.ObjectId;
   coachId: mongoose.Types.ObjectId;
   sessionId: mongoose.Types.ObjectId;
   sessionDate: Date;
@@ -26,7 +26,7 @@ const AttendanceSchema = new Schema<AttendanceDocument>(
   {
     studentId: { type: Schema.Types.ObjectId, ref: 'Student', required: true, index: true },
     franchiseId: { type: Schema.Types.ObjectId, ref: 'Franchise', required: true, index: true },
-    teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true, index: true },
+    teamId: { type: Schema.Types.ObjectId, ref: 'Team', index: true },
     coachId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     // Attendance can only be marked against a real scheduled session — this
     // is what stops it from being marked for an arbitrary/made-up date.

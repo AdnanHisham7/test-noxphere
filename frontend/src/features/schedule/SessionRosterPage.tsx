@@ -19,8 +19,6 @@ const ATTENDANCE_OPTIONS: { value: "present" | "absent" | "late" | "excused"; la
   { value: "excused", label: "Excused", color: "ice" },
 ];
 
-const SKILL_PARAMETERS = ["Technique", "Fitness", "Tactical Awareness", "Attitude"];
-
 type Tab = "attendance" | "performance";
 
 const SessionRosterPage: React.FC = () => {
@@ -74,7 +72,7 @@ const SessionRosterPage: React.FC = () => {
     );
   }
 
-  const { session, roster } = data;
+  const { session, roster, skillParameters } = data;
   const isCancelled = session.status === "cancelled";
 
   const setAttendanceStatus = (studentId: string, status: string) => {
@@ -105,7 +103,7 @@ const SessionRosterPage: React.FC = () => {
   const setScore = (studentId: string, parameter: string, value: number) => {
     setScoresPending((prev) => ({
       ...prev,
-      [studentId]: { ...(prev[studentId] ?? Object.fromEntries(SKILL_PARAMETERS.map((p) => [p, 7]))), [parameter]: value },
+      [studentId]: { ...(prev[studentId] ?? Object.fromEntries(skillParameters.map((p) => [p, 7]))), [parameter]: value },
     }));
   };
 
@@ -116,7 +114,7 @@ const SessionRosterPage: React.FC = () => {
       .filter((p) => scoresPending[p.studentId])
       .map((p) => ({
         studentId: p.studentId,
-        skillScores: SKILL_PARAMETERS.map((parameter) => ({
+        skillScores: skillParameters.map((parameter) => ({
           parameter,
           score: scoresPending[p.studentId][parameter] ?? 7,
         })),
@@ -146,7 +144,7 @@ const SessionRosterPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-display font-extrabold text-white text-xl uppercase tracking-wide">
-                {session.teamName ?? "Team"}
+                {session.targetType === "category" ? (session.category ?? "Category") : (session.teamName ?? "Team")}
               </h1>
               <Badge variant="gray" size="sm">{session.type}</Badge>
               <Badge variant={session.status === "completed" ? "green" : session.status === "cancelled" ? "red" : "blue"} size="sm">
@@ -227,8 +225,14 @@ const SessionRosterPage: React.FC = () => {
           ) : (
             <>
               <div className="space-y-3">
-                {roster.map((p) => {
-                  const scores = scoresPending[p.studentId] ?? Object.fromEntries(SKILL_PARAMETERS.map((s) => [s, 7]));
+                {skillParameters.length === 0 && (
+                  <EmptyState
+                    title="No skill parameters configured"
+                    description="Ask your academy manager to set up skill parameters before logging performance."
+                  />
+                )}
+                {skillParameters.length > 0 && roster.map((p) => {
+                  const scores = scoresPending[p.studentId] ?? Object.fromEntries(skillParameters.map((s) => [s, 7]));
                   return (
                     <div key={p.studentId} className="card p-5">
                       <div className="flex items-center justify-between mb-4">
@@ -241,7 +245,7 @@ const SessionRosterPage: React.FC = () => {
                         )}
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {SKILL_PARAMETERS.map((param) => (
+                        {skillParameters.map((param) => (
                           <div key={param}>
                             <div className="flex items-center justify-between text-xs mb-1.5">
                               <span className="text-slate-400">{param}</span>
@@ -271,7 +275,7 @@ const SessionRosterPage: React.FC = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-500 font-mono">{scoredCount} / {roster.length} scored</span>
-                <Button loading={savingPerformance} onClick={handleSavePerformance}>Save performance</Button>
+                <Button loading={savingPerformance} disabled={skillParameters.length === 0} onClick={handleSavePerformance}>Save performance</Button>
               </div>
             </>
           )}

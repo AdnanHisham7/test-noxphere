@@ -17,6 +17,7 @@ import {
   ConflictError,
   NotFoundError,
   BadRequestError,
+  ForbiddenError,
 } from "../../../shared/errors/AppError";
 import bcrypt from "bcryptjs";
 
@@ -77,6 +78,7 @@ export class AcademyUseCases {
       permissions: {
         canManageUsers: true,
         canManageFranchises: true,
+        canManageSessions: true,
         canManageFinance: true,
         canViewReports: true,
         canManageAttendance: true,
@@ -184,9 +186,24 @@ export class AcademyUseCases {
   async updateAcademyConfig(
     id: string,
     dto: AcademyConfigDto,
+    requester?: { role: string; franchiseId?: string },
   ): Promise<AcademyEntity> {
     const academy = await this.academyRepository.findById(id);
     if (!academy) throw new NotFoundError("Academy");
+
+    // A manager may only edit the academy their own franchise belongs to.
+    // super_admin is unrestricted. This is what makes skillParameters
+    // genuinely "defined by the manager of the academy" rather than only
+    // reachable through the super_admin-only Academies page.
+    if (requester && requester.role === "manager") {
+      if (!requester.franchiseId) {
+        throw new ForbiddenError("Your account isn't linked to a franchise");
+      }
+      const franchise = await FranchiseModel.findById(requester.franchiseId).select("academyId").lean();
+      if (!franchise || franchise.academyId.toString() !== id) {
+        throw new ForbiddenError("You can only configure your own academy");
+      }
+    }
 
     const updated = await this.academyRepository.update(id, dto);
     if (!updated) throw new NotFoundError("Academy");
