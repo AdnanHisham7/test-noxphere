@@ -21,17 +21,12 @@ const StudentsPage = lazy(() => import("./features/students/StudentsPage"));
 const StudentDetailPage = lazy(
   () => import("./features/students/StudentDetailPage"),
 );
-const AttendancePage = lazy(
-  () => import("./features/attendance/AttendancePage"),
-);
 const TransferWallPage = lazy(
   () => import("./features/transfer-wall/TransferWallPage"),
 );
-const PerformancePage = lazy(
-  () => import("./features/performance/PerformancePage"),
-);
 const FeesPage = lazy(() => import("./features/fees/FeesPage"));
 const TeamsPage = lazy(() => import("./features/teams/TeamsPage"));
+const TeamManagePage = lazy(() => import("./features/teams/TeamManagePage"));
 const SelectionPage = lazy(() => import("@/features/selection/SelectionPage"));
 const SchedulePage = lazy(() => import("./features/schedule/SchedulePage"));
 const SessionRosterPage = lazy(() => import("./features/schedule/SessionRosterPage"));
@@ -144,10 +139,6 @@ const App: React.FC = () => (
                 <Route path="/students" element={<StudentsPage />} />
                 <Route path="/students/:id" element={<StudentDetailPage />} />
 
-                <Route path="/attendance" element={<AttendancePage />} />
-
-                <Route path="/performance" element={<PerformancePage />} />
-
                 <Route path="/selection" element={<SelectionPage />} />
                 <Route path="/schedule" element={<SchedulePage />} />
                 <Route path="/schedule/:sessionId/roster" element={<SessionRosterPage />} />
@@ -159,6 +150,7 @@ const App: React.FC = () => (
               >
                 <Route path="/fees" element={<FeesPage />} />
                 <Route path="/teams" element={<TeamsPage />} />
+                <Route path="/teams/:id/manage" element={<TeamManagePage />} />
                 <Route path="/coaches" element={<CoachesManagementPage />} />
               </Route>
 
