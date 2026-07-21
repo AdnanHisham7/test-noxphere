@@ -22,8 +22,10 @@ import { PlayerPlaceholder } from "@/components/ui/PlayerPlaceholder";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import QRCode from "react-qr-code";
-import { useGetPlayerCardQuery } from "../../store/api/studentsApi";
+import { useGetPlayerCardQuery, useUpdateStudentPhotoMutation } from "../../store/api/studentsApi";
 import { useListPlayerMutation } from "../../store/api/transferApi";
+import { useUploadImageMutation } from "../../store/api/uploadApi";
+import { Camera, Loader2 } from "lucide-react";
 
 const getRatingColor = (r: number) =>
   r >= 9 ? "text-volt-400" : r >= 8 ? "text-field-400" : r >= 7 ? "text-ice-400" : "text-slate-400";
@@ -51,6 +53,28 @@ const StudentDetailPage: React.FC = () => {
 
   const { data: card, isLoading, isError } = useGetPlayerCardQuery(id ?? "", { skip: !id });
   const [listPlayer, { isLoading: listing }] = useListPlayerMutation();
+  const [uploadImage, { isLoading: uploadingPhoto }] = useUploadImageMutation();
+  const [updateStudentPhoto] = useUpdateStudentPhotoMutation();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = async (file: File | undefined) => {
+    if (!file || !id) return;
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("Only JPEG, PNG, WEBP or GIF images are allowed");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image is too large — the limit is 5MB");
+      return;
+    }
+    try {
+      const result = await uploadImage({ file, category: "player_photo" }).unwrap();
+      await updateStudentPhoto({ id, photo: result.url }).unwrap();
+      toast.success("Photo updated");
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Couldn't update photo — try again");
+    }
+  };
 
   const tabs = ["overview", "attendance", "performance", "info"] as const;
 
@@ -367,6 +391,22 @@ const StudentDetailPage: React.FC = () => {
                     nameWidth="72%"
                   />
                 )}
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="absolute bottom-1 right-1 z-20 bg-pitch-900/90 hover:bg-volt-400 hover:text-pitch-900 text-white border border-white/10 rounded-full p-2 transition-colors disabled:opacity-60"
+                  aria-label="Change photo"
+                >
+                  {uploadingPhoto ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+                </button>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => handlePhotoChange(e.target.files?.[0])}
+                />
               </div>
             </div>
 

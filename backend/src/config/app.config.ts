@@ -63,6 +63,13 @@ export const config = {
     s3Bucket: process.env.AWS_S3_BUCKET || "",
   },
 
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || "",
+    apiKey: process.env.CLOUDINARY_API_KEY || "",
+    apiSecret: process.env.CLOUDINARY_API_SECRET || "",
+    maxImageSizeBytes: parseInt(process.env.CLOUDINARY_MAX_IMAGE_BYTES || `${5 * 1024 * 1024}`, 10),
+  },
+
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10),
     max: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),

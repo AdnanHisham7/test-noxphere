@@ -18,6 +18,7 @@ import { usersRouter } from './users.routes';
 import { financeRouter } from './finance.routes';
 import { dashboardRouter } from './dashboard.routes';
 import { franchiseRouter } from './franchise.routes';
+import { uploadRouter } from './upload.routes';
 
 export const apiRouter = Router();
 
@@ -39,3 +40,4 @@ apiRouter.use('/selection', selectionRouter);
 apiRouter.use('/users', usersRouter);
 apiRouter.use('/finance', financeRouter);
 apiRouter.use('/dashboard', dashboardRouter);
+apiRouter.use('/uploads', uploadRouter);

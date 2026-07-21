@@ -8,6 +8,10 @@ export interface CreateTeamInput {
   franchiseId: string;
   coachId?: string;
   description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 export interface UpdateTeamInput {
@@ -15,6 +19,10 @@ export interface UpdateTeamInput {
   ageGroup?: string;
   coachId?: string;
   description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 export class TeamUseCases {
@@ -41,6 +49,10 @@ export class TeamUseCases {
       ageGroup: t.ageGroup,
       coach: t.coachId,
       description: t.description,
+      logoUrl: t.logoUrl,
+      bannerUrl: t.bannerUrl,
+      primaryColor: t.primaryColor,
+      secondaryColor: t.secondaryColor,
       studentCount: countMap.get(t._id.toString()) ?? 0,
     }));
   }
@@ -51,7 +63,7 @@ export class TeamUseCases {
       .lean();
     if (!team) throw new NotFoundError("Team not found");
     const students = await StudentModel.find({ teamId: id, deletedAt: { $exists: false } })
-      .select("firstName lastName photo attendancePercentage overallRating")
+      .select("firstName lastName photo jerseyNumber position attendancePercentage overallRating")
       .lean();
     return { ...team, id: team._id.toString(), students };
   }

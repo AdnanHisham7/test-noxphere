@@ -61,6 +61,7 @@ export interface CreateStudentBody {
   jerseyNumber?: number;
   jerseySize?: string;
   position?: string;
+  photo?: string;
   guardian: GuardianInfo;
   medicalInfo: MedicalInfo;
 }
@@ -113,6 +114,11 @@ export const studentsApi = baseApi.injectEndpoints({
       transformResponse: (res: { data: Student }) => res.data,
       invalidatesTags: (_, __, { id }) => [{ type: 'Student', id }, { type: 'Student', id: 'LIST' }],
     }),
+    updateStudentPhoto: builder.mutation<Student, { id: string; photo: string }>({
+      query: ({ id, photo }) => ({ url: `/students/${id}/photo`, method: 'PATCH', body: { photo } }),
+      transformResponse: (res: { data: Student }) => res.data,
+      invalidatesTags: (_, __, { id }) => [{ type: 'Student', id }, { type: 'Student', id: 'LIST' }],
+    }),
     deleteStudent: builder.mutation<void, string>({
       query: (id) => ({ url: `/students/${id}`, method: 'DELETE' }),
       invalidatesTags: (_, __, id) => [{ type: 'Student', id }, { type: 'Student', id: 'LIST' }],
@@ -132,7 +138,7 @@ export const studentsApi = baseApi.injectEndpoints({
     getPlayerCard: builder.query<PlayerCard, string>({
       query: (id) => `/students/${id}/playercard`,
       transformResponse: (res: { data: PlayerCard }) => res.data,
-      providesTags: (_, __, id) => [{ type: 'Performance', id }],
+      providesTags: (_, __, id) => [{ type: 'Performance', id }, { type: 'Student', id }],
     }),
   }),
 });
@@ -142,6 +148,7 @@ export const {
   useGetStudentByIdQuery,
   useCreateStudentMutation,
   useUpdateStudentMutation,
+  useUpdateStudentPhotoMutation,
   useDeleteStudentMutation,
   useAddCoachRemarkMutation,
   useListOnTransferMutation,

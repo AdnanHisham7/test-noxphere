@@ -52,6 +52,8 @@ import { DashboardUseCases } from "./application/use-cases/dashboard/DashboardUs
 import { TransferUseCases } from "./application/use-cases/transfer/TransferUseCases";
 import { FranchiseController } from "./interfaces/http/controllers/FranchiseController";
 import { FranchiseUseCases } from "./application/use-cases/franchise/FranchiseUseCases";
+import { UploadController } from "./interfaces/http/controllers/UploadController";
+import { CloudinaryService } from "./infrastructure/services/CloudinaryService";
 
 const app = express();
 const httpServer = createServer(app);
@@ -170,6 +172,9 @@ const academyController = new AcademyController(academyUseCases);
   const franchiseUseCases = new FranchiseUseCases();
   const franchiseController = new FranchiseController(franchiseUseCases);
 
+  const cloudinaryService = new CloudinaryService();
+  const uploadController = new UploadController(cloudinaryService);
+
   app.locals.controllers = {
     auth: authController,
     transfer: transferController,
@@ -189,6 +194,7 @@ const academyController = new AcademyController(academyUseCases);
     finance: financeController,
     dashboard: dashboardController,
     franchise: franchiseController,
+    upload: uploadController,
   };
 }
 

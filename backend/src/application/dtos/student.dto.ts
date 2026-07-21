@@ -26,6 +26,7 @@ export const CreateStudentSchema = z.object({
   jerseyNumber: z.number().min(1).max(99).optional(),
   jerseySize: z.string().optional(),
   position: z.string().optional(),
+  photo: z.string().url().optional(),
   guardian: GuardianInfoSchema,
   medicalInfo: MedicalInfoSchema,
 });

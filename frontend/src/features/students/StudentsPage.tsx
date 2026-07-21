@@ -11,6 +11,7 @@ import {
   EmptyState,
   Modal,
   Skeleton,
+  ImageUploadField,
 } from "../../components/ui";
 import { toast } from "react-hot-toast";
 import mannequinPng from "../../assets/players/mannequin.png";
@@ -470,12 +471,13 @@ const AddPlayerModal: React.FC<{
   const [position, setPosition] = useState("Forward");
   const [jerseyNumber, setJerseyNumber] = useState("");
   const [teamId, setTeamId] = useState("");
+  const [photo, setPhoto] = useState<string | undefined>(undefined);
   const [guardian, setGuardian] = useState(emptyGuardian);
   const [medical, setMedical] = useState(emptyMedical);
 
   const reset = () => {
     setFirstName(""); setLastName(""); setDob(""); setAgeGroup("U-13"); setPosition("Forward");
-    setJerseyNumber(""); setTeamId(""); setGuardian(emptyGuardian); setMedical(emptyMedical);
+    setJerseyNumber(""); setTeamId(""); setPhoto(undefined); setGuardian(emptyGuardian); setMedical(emptyMedical);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -494,6 +496,7 @@ const AddPlayerModal: React.FC<{
       teamId: teamId || undefined,
       jerseyNumber: jerseyNumber ? parseInt(jerseyNumber, 10) : undefined,
       position,
+      photo,
       guardian,
       medicalInfo: {
         bloodGroup: medical.bloodGroup || undefined,
@@ -517,7 +520,15 @@ const AddPlayerModal: React.FC<{
           <div className="space-y-4">
             <div>
               <p className="section-title mb-3 text-volt-400">Player Info</p>
-              <div className="grid grid-cols-2 gap-3">
+              <ImageUploadField
+                label="Player photo (optional)"
+                category="player_photo"
+                value={photo}
+                onChange={setPhoto}
+                shape="circle"
+                helperText="Shown on the player's card throughout the app. Can be added later too."
+              />
+              <div className="grid grid-cols-2 gap-3 mt-4">
                 <Input label="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Arjun" required />
                 <Input label="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Mehta" required />
               </div>

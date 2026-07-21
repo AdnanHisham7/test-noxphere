@@ -7,6 +7,10 @@ export interface Team {
   ageGroup: string;
   coach?: { _id: string; firstName: string; lastName: string };
   description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
   studentCount: number;
 }
 
@@ -17,6 +21,8 @@ export interface TeamDetail extends Omit<Team, "coach"> {
     firstName: string;
     lastName: string;
     photo?: string;
+    jerseyNumber?: number;
+    position?: string;
     attendancePercentage: number;
     overallRating: number;
   }[];
@@ -28,6 +34,10 @@ export interface CreateTeamBody {
   franchiseId: string;
   coachId?: string;
   description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 export const teamsApi = baseApi.injectEndpoints({

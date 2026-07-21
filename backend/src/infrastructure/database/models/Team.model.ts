@@ -6,10 +6,16 @@ export interface TeamDocument extends Document {
   franchiseId: mongoose.Types.ObjectId;
   coachId?: mongoose.Types.ObjectId;
   description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
   deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const HEX_COLOR_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 const TeamSchema = new Schema<TeamDocument>(
   {
@@ -18,6 +24,10 @@ const TeamSchema = new Schema<TeamDocument>(
     franchiseId: { type: Schema.Types.ObjectId, ref: "Franchise", required: true, index: true },
     coachId: { type: Schema.Types.ObjectId, ref: "User", index: true },
     description: String,
+    logoUrl: String,
+    bannerUrl: String,
+    primaryColor: { type: String, match: HEX_COLOR_REGEX, default: "#1f2937" },
+    secondaryColor: { type: String, match: HEX_COLOR_REGEX, default: "#334155" },
     deletedAt: { type: Date, select: false },
   },
   {

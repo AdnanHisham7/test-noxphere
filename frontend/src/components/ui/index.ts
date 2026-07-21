@@ -9,3 +9,4 @@ export { Avatar } from "./Avatar";
 export { StatCard } from "./StatCard";
 export { EmptyState } from "./EmptyState";
 export { Spinner } from "./Spinner";
+export { ImageUploadField } from "./ImageUploadField";

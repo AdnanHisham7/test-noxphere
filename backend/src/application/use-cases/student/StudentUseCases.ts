@@ -104,6 +104,7 @@ export class StudentUseCases {
       jerseyNumber: dto.jerseyNumber,
       jerseySize: dto.jerseySize,
       position: dto.position,
+      photo: dto.photo,
       medicalInfo: dto.medicalInfo,
       enrollmentDate: new Date(),
       isActive: true,
@@ -137,6 +138,12 @@ export class StudentUseCases {
 
   async getStudentById(id: string): Promise<StudentEntity> {
     const student = await this.studentRepo.findById(id);
+    if (!student) throw new NotFoundError("Student");
+    return student;
+  }
+
+  async updateStudentPhoto(id: string, photo: string): Promise<StudentEntity> {
+    const student = await this.studentRepo.update(id, { photo });
     if (!student) throw new NotFoundError("Student");
     return student;
   }
