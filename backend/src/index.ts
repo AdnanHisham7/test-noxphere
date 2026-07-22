@@ -54,6 +54,8 @@ import { FranchiseController } from "./interfaces/http/controllers/FranchiseCont
 import { FranchiseUseCases } from "./application/use-cases/franchise/FranchiseUseCases";
 import { UploadController } from "./interfaces/http/controllers/UploadController";
 import { CloudinaryService } from "./infrastructure/services/CloudinaryService";
+import { ResourceController } from "./interfaces/http/controllers/ResourceController";
+import { ResourceUseCases } from "./application/use-cases/resource/ResourceUseCases";
 
 const app = express();
 const httpServer = createServer(app);
@@ -87,7 +89,7 @@ const limiter = rateLimit({
     message: "Too many requests, please try again later.",
   },
 });
-// app.use(config.apiPrefix, limiter);
+app.use(config.apiPrefix, limiter);
 
 // ─── General Middleware ────────────────────────────────────────────────────────
 app.use(compression());
@@ -174,6 +176,8 @@ const academyController = new AcademyController(academyUseCases);
 
   const cloudinaryService = new CloudinaryService();
   const uploadController = new UploadController(cloudinaryService);
+  const resourceUseCases = new ResourceUseCases(cloudinaryService);
+  const resourceController = new ResourceController(resourceUseCases);
 
   app.locals.controllers = {
     auth: authController,
@@ -195,6 +199,7 @@ const academyController = new AcademyController(academyUseCases);
     dashboard: dashboardController,
     franchise: franchiseController,
     upload: uploadController,
+    resource: resourceController,
   };
 }
 

@@ -20,6 +20,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  FolderOpen,
   type LucideIcon,
 } from 'lucide-react';
 import { RootState } from '../../store';
@@ -56,12 +57,15 @@ const navConfig: Record<string, NavItem[]> = {
     // performance for every session — those no longer need their own
     // sidebar entries or pages.
     { path: '/schedule', label: 'Sessions', icon: CalendarClock },
+    { path: '/resources', label: 'Resources', icon: FolderOpen },
     { path: '/notifications', label: 'Alerts', icon: Bell },
   ],
   coach: [
     { path: '/coach/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/students', label: 'Squad', icon: Shirt },
     { path: '/selection', label: 'Selection', icon: Target },
     { path: '/schedule', label: 'Sessions', icon: CalendarClock },
+    { path: '/resources', label: 'Resources', icon: FolderOpen },
     { path: '/notifications', label: 'Alerts', icon: Bell },
   ],
 };

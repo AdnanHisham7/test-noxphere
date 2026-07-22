@@ -1,9 +1,7 @@
-// src/features/schedule/SessionRosterPage.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
-import { ArrowLeft, CalendarDays } from "lucide-react";
+import { ArrowLeft, CalendarDays, Save, Zap } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { clsx } from "clsx";
 import { Button, Badge, Avatar, Skeleton, EmptyState } from "../../components/ui";
 import {
   useGetSessionRosterQuery,
@@ -12,19 +10,17 @@ import {
   type RosterPlayer,
 } from "../../store/api/scheduleApi";
 
-const ATTENDANCE_OPTIONS: { value: "present" | "absent" | "late" | "excused"; label: string; color: string }[] = [
-  { value: "present", label: "Present", color: "field" },
-  { value: "late", label: "Late", color: "volt" },
-  { value: "absent", label: "Absent", color: "ember" },
-  { value: "excused", label: "Excused", color: "ice" },
-];
-
-type Tab = "attendance" | "performance";
+const ATTENDANCE_OPTIONS = [
+  { value: "present", label: "P", fullLabel: "Present", activeBg: "bg-emerald-500 text-pitch-900 font-bold" },
+  { value: "late", label: "L", fullLabel: "Late", activeBg: "bg-amber-400 text-pitch-900 font-bold" },
+  { value: "absent", label: "A", fullLabel: "Absent", activeBg: "bg-ember-500 text-white font-bold" },
+  { value: "excused", label: "E", fullLabel: "Excused", activeBg: "bg-ice-400 text-pitch-900 font-bold" },
+] as const;
 
 const SessionRosterPage: React.FC = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
-  const [tab, setTab] = useState<Tab>("attendance");
 
+  // 1. ALL HOOKS MUST BE DECLARED FIRST
   const { data, isLoading, isError } = useGetSessionRosterQuery(sessionId ?? "", { skip: !sessionId });
   const [markAttendance, { isLoading: savingAttendance }] = useMarkSessionAttendanceMutation();
   const [logPerformance, { isLoading: savingPerformance }] = useLogSessionPerformanceMutation();
@@ -35,8 +31,6 @@ const SessionRosterPage: React.FC = () => {
 
   useEffect(() => {
     if (!data) return;
-    // Seed pending performance scores for anyone not yet recorded, so the
-    // sliders have sensible defaults instead of starting blank.
     setScoresPending((prev) => {
       const next = { ...prev };
       for (const p of data.roster) {
@@ -49,14 +43,99 @@ const SessionRosterPage: React.FC = () => {
     });
   }, [data]);
 
+  // Safe fallback arrays before checks
+  const roster = data?.roster ?? [];
+  const skillParameters = data?.skillParameters ?? [];
+
+  // attendanceMetrics hook moved BEFORE any early returns
+  const attendanceMetrics = useMemo(() => {
+    let present = 0,
+      late = 0,
+      absent = 0,
+      excused = 0,
+      unmarked = 0;
+
+    roster.forEach((p) => {
+      const status = attendancePending[p.studentId] ?? p.attendanceStatus ?? "";
+      if (status === "present") present++;
+      else if (status === "late") late++;
+      else if (status === "absent") absent++;
+      else if (status === "excused") excused++;
+      else unmarked++;
+    });
+
+    return { present, late, absent, excused, unmarked };
+  }, [roster, attendancePending]);
+
+  // Helper functions
+  const getAttendanceStatus = (p: RosterPlayer) => attendancePending[p.studentId] ?? p.attendanceStatus ?? "";
+
+  const setScore = (studentId: string, parameter: string, value: number) => {
+    setScoresPending((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...(prev[studentId] ?? Object.fromEntries(skillParameters.map((p) => [p, 7]))),
+        [parameter]: value,
+      },
+    }));
+  };
+
+  // Bulk operation: Mark all unmarked as Present
+  const handleMarkAllPresent = () => {
+    const updated = { ...attendancePending };
+    roster.forEach((p) => {
+      if (!getAttendanceStatus(p)) {
+        updated[p.studentId] = "present";
+      }
+    });
+    setAttendancePending(updated);
+    toast.success("Marked all unmarked athletes as Present");
+  };
+
+  // Unified Save Workflow
+  const handleSaveAll = async () => {
+    if (!sessionId) return;
+    try {
+      // 1. Submit Attendance
+      const attendanceRecords = roster
+        .filter((p) => getAttendanceStatus(p))
+        .map((p) => ({ studentId: p.studentId, status: getAttendanceStatus(p) as any }));
+
+      if (attendanceRecords.length > 0) {
+        await markAttendance({ id: sessionId, records: attendanceRecords }).unwrap();
+      }
+
+      // 2. Submit Performance Evaluation
+      const performanceRecords = roster
+        .filter((p) => scoresPending[p.studentId])
+        .map((p) => ({
+          studentId: p.studentId,
+          skillScores: skillParameters.map((parameter) => ({
+            parameter,
+            score: scoresPending[p.studentId][parameter] ?? 7,
+          })),
+          remarks: remarksPending[p.studentId] || undefined,
+        }));
+
+      if (performanceRecords.length > 0) {
+        await logPerformance({ id: sessionId, records: performanceRecords }).unwrap();
+      }
+
+      toast.success("Session roster and evaluations saved");
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Couldn't save roster changes — try again");
+    }
+  };
+
+  // 2. EARLY RETURNS ARE SAFELY PLACED NOW
   if (!sessionId) return <Navigate to="/schedule" replace />;
 
   if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-24 rounded-lg" />
-        <Skeleton className="h-96 rounded-lg" />
+        <Skeleton className="h-20 rounded-xl" />
+        <Skeleton className="h-96 rounded-xl" />
       </div>
     );
   }
@@ -66,219 +145,194 @@ const SessionRosterPage: React.FC = () => {
       <EmptyState
         icon={<CalendarDays size={28} />}
         title="Session not found"
-        description="This session may have been removed."
-        action={<Link to="/schedule" className="text-volt-400 hover:underline text-sm">← Back to Schedule</Link>}
+        description="This session may have been removed or relocated."
+        action={
+          <Link to="/schedule" className="text-volt-400 hover:underline text-xs">
+            ← Return to Schedule
+          </Link>
+        }
       />
     );
   }
 
-  const { session, roster, skillParameters } = data;
+  const { session } = data;
   const isCancelled = session.status === "cancelled";
 
-  const setAttendanceStatus = (studentId: string, status: string) => {
-    setAttendancePending((p) => ({ ...p, [studentId]: status }));
-  };
-
-  const getAttendanceStatus = (p: RosterPlayer) => attendancePending[p.studentId] ?? p.attendanceStatus ?? "";
-
-  const markedCount = roster.filter((p) => getAttendanceStatus(p)).length;
-
-  const handleSaveAttendance = async () => {
-    const records = roster
-      .filter((p) => getAttendanceStatus(p))
-      .map((p) => ({ studentId: p.studentId, status: getAttendanceStatus(p) as any }));
-    if (!records.length) {
-      toast.error("Mark at least one student first");
-      return;
-    }
-    try {
-      await markAttendance({ id: sessionId, records }).unwrap();
-      toast.success("Attendance saved");
-      setAttendancePending({});
-    } catch (err: any) {
-      toast.error(err?.data?.message || "Couldn't save attendance — try again");
-    }
-  };
-
-  const setScore = (studentId: string, parameter: string, value: number) => {
-    setScoresPending((prev) => ({
-      ...prev,
-      [studentId]: { ...(prev[studentId] ?? Object.fromEntries(skillParameters.map((p) => [p, 7]))), [parameter]: value },
-    }));
-  };
-
-  const scoredCount = roster.filter((p) => p.performanceRecorded || scoresPending[p.studentId]).length;
-
-  const handleSavePerformance = async () => {
-    const records = roster
-      .filter((p) => scoresPending[p.studentId])
-      .map((p) => ({
-        studentId: p.studentId,
-        skillScores: skillParameters.map((parameter) => ({
-          parameter,
-          score: scoresPending[p.studentId][parameter] ?? 7,
-        })),
-        remarks: remarksPending[p.studentId] || undefined,
-      }));
-    if (!records.length) {
-      toast.error("Score at least one student first");
-      return;
-    }
-    try {
-      await logPerformance({ id: sessionId, records }).unwrap();
-      toast.success("Performance logged");
-    } catch (err: any) {
-      toast.error(err?.data?.message || "Couldn't log performance — try again");
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <Link to="/schedule" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
-        <ArrowLeft size={15} /> Back to Schedule
-      </Link>
-
-      {/* Session header */}
-      <div className="card p-5">
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="font-display font-extrabold text-white text-xl uppercase tracking-wide">
-                {session.targetType === "category" ? (session.category ?? "Category") : (session.teamName ?? "Team")}
-              </h1>
-              <Badge variant="gray" size="sm">{session.type}</Badge>
-              <Badge variant={session.status === "completed" ? "green" : session.status === "cancelled" ? "red" : "blue"} size="sm">
-                {session.status}
-              </Badge>
-            </div>
-            <p className="text-xs text-slate-500 font-mono mt-1">
-              {new Date(session.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
-              {" · "}{session.startTime}–{session.endTime}
-              {" · "}{session.location}
-            </p>
+    <div className="space-y-6 text-slate-100">
+      {/* Header Context */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div>
+          <Link to="/schedule" className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-2">
+            <ArrowLeft size={14} /> Back to Schedule
+          </Link>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="font-display font-bold text-xl text-white uppercase tracking-wide">
+              {session.targetType === "category" ? (session.category ?? "Category") : (session.teamName ?? "Team")}
+            </h1>
+            <Badge variant="gray" size="sm">
+              {session.type}
+            </Badge>
+            <Badge
+              variant={session.status === "completed" ? "green" : session.status === "cancelled" ? "red" : "blue"}
+              size="sm"
+            >
+              {session.status}
+            </Badge>
           </div>
+          <p className="text-2xs text-slate-400 font-mono mt-1">
+            {new Date(session.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+            {" · "}
+            {session.startTime}–{session.endTime}
+            {" · "}
+            {session.location}
+          </p>
         </div>
+
+        {!isCancelled && (
+          <Button
+            loading={savingAttendance || savingPerformance}
+            onClick={handleSaveAll}
+            icon={<Save size={15} />}
+            className="text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-pitch-900"
+          >
+            Save All Updates
+          </Button>
+        )}
       </div>
 
-      {isCancelled && (
+      {isCancelled ? (
         <EmptyState
-          title="This session was cancelled"
-          description="Attendance and performance can't be recorded for a cancelled session."
+          title="Session Cancelled"
+          description="Attendance and skill evaluations are locked for cancelled operational sessions."
         />
-      )}
-
-      {!isCancelled && (
+      ) : roster.length === 0 ? (
+        <EmptyState title="No athletes assigned" description="Assign players to this team to log roster operational data." />
+      ) : (
         <>
-          {/* Tabs */}
-          <div className="flex items-center gap-1 bg-pitch-800 p-1 rounded border border-white/5 w-fit">
-            {(["attendance", "performance"] as Tab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={clsx(
-                  "px-4 py-1.5 rounded text-xs font-display font-bold uppercase tracking-wide transition-all duration-150",
-                  tab === t ? "bg-volt-400 text-pitch-900" : "text-slate-500 hover:text-white",
-                )}
-              >
-                {t === "attendance" ? "Attendance" : "Performance"}
-              </button>
-            ))}
+          {/* Operational Metrics & Quick Actions Bar */}
+          <div className="p-3.5 rounded-xl bg-pitch-800 border border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-4 font-mono">
+              <span className="text-emerald-400">P: {attendanceMetrics.present}</span>
+              <span className="text-amber-400">L: {attendanceMetrics.late}</span>
+              <span className="text-ember-400">A: {attendanceMetrics.absent}</span>
+              <span className="text-ice-400">E: {attendanceMetrics.excused}</span>
+              <span className="text-slate-500">Unmarked: {attendanceMetrics.unmarked}</span>
+            </div>
+
+            <button
+              onClick={handleMarkAllPresent}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-volt-400/10 hover:bg-volt-400/20 text-volt-400 font-semibold border border-volt-400/20 transition-all text-xs"
+            >
+              <Zap size={14} /> Quick Mark Remaining Present
+            </button>
           </div>
 
-          {roster.length === 0 ? (
-            <EmptyState title="No players on this team" description="Assign students to this team to take attendance." />
-          ) : tab === "attendance" ? (
-            <>
-              <div className="card divide-y divide-white/5">
-                {roster.map((p) => (
-                  <div key={p.studentId} className="flex items-center justify-between gap-4 px-5 py-4 flex-wrap">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={`${p.firstName} ${p.lastName}`} src={p.photo} size="sm" />
-                      <div>
-                        <p className="text-sm text-white font-medium">{p.firstName} {p.lastName}</p>
-                        <p className="text-2xs text-slate-500">{p.position ?? "—"}{p.jerseyNumber ? ` · #${p.jerseyNumber}` : ""}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {ATTENDANCE_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setAttendanceStatus(p.studentId, opt.value)}
-                          className={
-                            getAttendanceStatus(p) === opt.value
-                              ? "px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wide bg-volt-400 text-pitch-900"
-                              : "px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wide border border-white/10 text-slate-400 hover:border-white/30 hover:text-white transition-colors"
-                          }
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-mono">{markedCount} / {roster.length} marked</span>
-                <Button loading={savingAttendance} onClick={handleSaveAttendance}>Save attendance</Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-3">
-                {skillParameters.length === 0 && (
-                  <EmptyState
-                    title="No skill parameters configured"
-                    description="Ask your academy manager to set up skill parameters before logging performance."
-                  />
-                )}
-                {skillParameters.length > 0 && roster.map((p) => {
-                  const scores = scoresPending[p.studentId] ?? Object.fromEntries(skillParameters.map((s) => [s, 7]));
-                  return (
-                    <div key={p.studentId} className="card p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={`${p.firstName} ${p.lastName}`} src={p.photo} size="sm" />
-                          <p className="text-sm text-white font-medium">{p.firstName} {p.lastName}</p>
-                        </div>
-                        {p.performanceRecorded && !scoresPending[p.studentId] && (
-                          <Badge variant="green" size="sm">Logged · {p.overallScore?.toFixed(1)}</Badge>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {skillParameters.map((param) => (
-                          <div key={param}>
-                            <div className="flex items-center justify-between text-xs mb-1.5">
-                              <span className="text-slate-400">{param}</span>
-                              <span className="font-mono text-volt-400">{scores[param]}/10</span>
+          {/* Unified Operational Grid */}
+          <div className="rounded-xl border border-white/10 bg-pitch-800/50 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-pitch-900/80 border-b border-white/10 text-slate-400 font-mono uppercase text-2xs tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Athlete Details</th>
+                    <th className="py-3 px-4">Attendance Status</th>
+                    <th className="py-3 px-4">Skill Evaluations (0 - 10)</th>
+                    <th className="py-3 px-4">Session Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {roster.map((player) => {
+                    const currentStatus = getAttendanceStatus(player);
+                    const scores = scoresPending[player.studentId] ?? Object.fromEntries(skillParameters.map((s) => [s, 7]));
+
+                    return (
+                      <tr key={player.studentId} className="hover:bg-white/[0.02] transition-colors">
+                        {/* Player Identification */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <Avatar name={`${player.firstName} ${player.lastName}`} src={player.photo} size="sm" />
+                            <div>
+                              <p className="text-xs font-semibold text-white">
+                                {player.firstName} {player.lastName}
+                              </p>
+                              <p className="text-2xs font-mono text-slate-500">
+                                #{player.jerseyNumber || "N/A"} · {player.position || "Athlete"}
+                              </p>
                             </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={10}
-                              value={scores[param]}
-                              onChange={(e) => setScore(p.studentId, param, Number(e.target.value))}
-                              className="w-full accent-[#ccff00]"
-                            />
                           </div>
-                        ))}
-                      </div>
-                      <textarea
-                        value={remarksPending[p.studentId] ?? p.performanceRemarks ?? ""}
-                        onChange={(e) => setRemarksPending((r) => ({ ...r, [p.studentId]: e.target.value }))}
-                        placeholder="Session notes (optional)"
-                        rows={2}
-                        className="input mt-3 w-full resize-none"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-mono">{scoredCount} / {roster.length} scored</span>
-                <Button loading={savingPerformance} disabled={skillParameters.length === 0} onClick={handleSavePerformance}>Save performance</Button>
-              </div>
-            </>
-          )}
+                        </td>
+
+                        {/* High-Touch Attendance Toggles */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="inline-flex rounded-lg bg-pitch-900 p-1 border border-white/10 gap-1">
+                            {ATTENDANCE_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setAttendancePending((p) => ({ ...p, [player.studentId]: opt.value }))}
+                                className={`w-7 h-7 rounded text-xs transition-all ${
+                                  currentStatus === opt.value
+                                    ? opt.activeBg
+                                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                                }`}
+                                title={opt.fullLabel}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+
+                        {/* Skill Rating Chips */}
+                        <td className="py-3.5 px-4">
+                          {skillParameters.length === 0 ? (
+                            <span className="text-2xs text-slate-500 italic">No skills configured</span>
+                          ) : (
+                            <div className="space-y-2">
+                              {skillParameters.map((param) => (
+                                <div key={param} className="flex items-center gap-2">
+                                  <span className="w-24 text-2xs text-slate-400 truncate">{param}</span>
+                                  <div className="flex items-center gap-1">
+                                    {[5, 6, 7, 8, 9, 10].map((scoreVal) => (
+                                      <button
+                                        key={scoreVal}
+                                        type="button"
+                                        onClick={() => setScore(player.studentId, param, scoreVal)}
+                                        className={`w-6 h-6 rounded text-2xs font-mono transition-all ${
+                                          scores[param] === scoreVal
+                                            ? "bg-volt-400 text-pitch-900 font-bold"
+                                            : "bg-pitch-900 text-slate-400 hover:bg-white/10"
+                                        }`}
+                                      >
+                                        {scoreVal}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Operational Remarks */}
+                        <td className="py-3.5 px-4">
+                          <textarea
+                            value={remarksPending[player.studentId] ?? player.performanceRemarks ?? ""}
+                            onChange={(e) =>
+                              setRemarksPending((r) => ({ ...r, [player.studentId]: e.target.value }))
+                            }
+                            placeholder="Session notes..."
+                            rows={1}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-pitch-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-volt-400 resize-none"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </>
       )}
     </div>

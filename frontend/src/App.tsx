@@ -11,7 +11,6 @@ import ProtectedRoute from "./components/layout/ProtectedRoute";
 import RoleProtectedRoute from "./components/layout/RoleProtectedRoute";
 import { GUARDIAN_NAV_ITEMS } from "./features/guardian/guardianNav";
 import { STUDENT_NAV_ITEMS } from "./features/student-portal/studentNav";
-import { COACH_NAV_ITEMS } from "./features/coach-portal/coachNav";
 
 // Lazy loaded pages
 const LandingPage = lazy(() => import("./features/landing/LandingPage"));
@@ -27,6 +26,7 @@ const TransferWallPage = lazy(
 const FeesPage = lazy(() => import("./features/fees/FeesPage"));
 const TeamsPage = lazy(() => import("./features/teams/TeamsPage"));
 const TeamManagePage = lazy(() => import("./features/teams/TeamManagePage"));
+const ResourcesPage = lazy(() => import("./features/resources/ResourcesPage"));
 const SelectionPage = lazy(() => import("@/features/selection/SelectionPage"));
 const SchedulePage = lazy(() => import("./features/schedule/SchedulePage"));
 const SessionRosterPage = lazy(() => import("./features/schedule/SessionRosterPage"));
@@ -142,6 +142,16 @@ const App: React.FC = () => (
                 <Route path="/selection" element={<SelectionPage />} />
                 <Route path="/schedule" element={<SchedulePage />} />
                 <Route path="/schedule/:sessionId/roster" element={<SessionRosterPage />} />
+                <Route path="/resources" element={<ResourcesPage />} />
+              </Route>
+
+              {/* Coach only — same MainLayout shell/Sidebar as everyone else,
+                  not a separate portal chrome */}
+              <Route
+                element={<RoleProtectedRoute allowedRoles={["coach"]} />}
+              >
+                <Route path="/coach/dashboard" element={<CoachDashboardPage />} />
+                <Route path="/coach/students/:id" element={<CoachStudentPanelPage />} />
               </Route>
 
               {/* Manager only */}
@@ -194,21 +204,6 @@ const App: React.FC = () => (
               >
                 <Route path="/student/dashboard" element={<StudentDashboardPage />} />
                 <Route path="/student/progress" element={<StudentProgressPage />} />
-              </Route>
-            </Route>
-          </Route>
-
-          {/* Coach portal — lightweight daily-use shell. The full admin UI
-              (students/attendance/performance under MainLayout) remains
-              reachable for coaches too, unchanged, for anything this portal
-              doesn't cover yet. */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<RoleProtectedRoute allowedRoles={["coach"]} />}>
-              <Route
-                element={<PortalLayout navItems={COACH_NAV_ITEMS} portalLabel="Coach portal" />}
-              >
-                <Route path="/coach/dashboard" element={<CoachDashboardPage />} />
-                <Route path="/coach/students/:id" element={<CoachStudentPanelPage />} />
               </Route>
             </Route>
           </Route>

@@ -50,7 +50,7 @@ export const authorize = (...roles: UserRole[]) => {
       return;
     }
     if (!roles.includes(req.user.role)) {
-      next(new ForbiddenError('Insufficient role permissions'));
+      next(new ForbiddenError(`Insufficient role permissions. Required: ${roles.join(', ')}, Got: ${req.user?.role}`));
       return;
     }
     next();

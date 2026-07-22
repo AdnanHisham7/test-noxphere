@@ -12,16 +12,16 @@ usersRouter.get("/", (req, res, next) => {
 usersRouter.get("/:id", (req, res, next) => {
   req.app.locals.controllers.users.getById(req, res, next);
 });
-usersRouter.post("/", authorize("super_admin"), (req, res, next) => {
+usersRouter.post("/", authorize("super_admin", "manager"), (req, res, next) => {
   req.app.locals.controllers.users.create(req, res, next);
 });
-usersRouter.put("/:id", authorize("super_admin"), (req, res, next) => {
+usersRouter.put("/:id", authorize("super_admin", "manager"), (req, res, next) => {
   req.app.locals.controllers.users.update(req, res, next);
 });
-usersRouter.patch("/:id/toggle-active", authorize("super_admin"), (req, res, next) => {
+usersRouter.patch("/:id/toggle-active", authorize("super_admin", "manager"), (req, res, next) => {
   req.app.locals.controllers.users.toggleActive(req, res, next);
 });
-usersRouter.patch("/:id/reset-password", authorize("super_admin"), (req, res, next) => {
+usersRouter.patch("/:id/reset-password", authorize("super_admin", "manager"), (req, res, next) => {
   req.app.locals.controllers.users.resetPassword(req, res, next);
 });
 usersRouter.delete("/:id", authorize("super_admin"), (req, res, next) => {

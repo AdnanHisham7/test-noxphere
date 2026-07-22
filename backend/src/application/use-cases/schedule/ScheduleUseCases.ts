@@ -225,12 +225,14 @@ export class ScheduleUseCases {
    * from hard-failing).
    */
   private async getSkillParametersForFranchise(franchiseId: mongoose.Types.ObjectId | string): Promise<string[]> {
-    const franchise = await FranchiseModel.findById(franchiseId).select("academyId").lean();
+    const franchise = await FranchiseModel.findById(franchiseId).select("skillParameters").lean();
     if (!franchise) throw new NotFoundError("Franchise");
-    const academy = await AcademyModel.findById(franchise.academyId).select("skillParameters").lean();
-    if (academy?.skillParameters?.length) return academy.skillParameters;
-    return ["Dribbling", "Passing", "Shooting", "Speed", "Tactical Awareness", "Attitude"];
+    // Return franchise-specific skills; fallback to default set if empty
+    return franchise.skillParameters?.length ? franchise.skillParameters : [
+      "Dribbling", "Passing", "Shooting", "Speed", "Tactical Awareness", "Attitude"
+    ];
   }
+
 
   /**
    * The roster for a session: every student on that session's team, merged

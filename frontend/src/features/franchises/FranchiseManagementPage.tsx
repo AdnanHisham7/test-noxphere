@@ -1,7 +1,7 @@
 // src/features/franchises/FranchiseManagementPage.tsx
 import React, { useEffect, useState } from "react";
 import { clsx } from "clsx";
-import { Building2, Plus, Power, Trash2, ListChecks, X } from "lucide-react";
+import { Building2, Plus, Power, Trash2, ListChecks, X, Pencil } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useSelector } from "react-redux";
 import { Button, Input, Badge, Modal, Skeleton, EmptyState } from "../../components/ui";
@@ -47,6 +47,17 @@ const FranchiseManagementPage: React.FC = () => {
   const [toggleActive] = useToggleFranchiseActiveMutation();
   const [deleteFranchise] = useDeleteFranchiseMutation();
   const [showCreate, setShowCreate] = useState(false);
+  const [editingFranchise, setEditingFranchise] = useState<Franchise | null>(null);
+  const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
+
+  const openSkillModal = (franchise: Franchise) => {
+    setEditingFranchise(franchise);
+    setIsSkillModalOpen(true);
+  };
+  const closeSkillModal = () => {
+    setIsSkillModalOpen(false);
+    setEditingFranchise(null);
+  };
 
   const handleToggle = async (id: string, isActive: boolean) => {
     try {
@@ -107,8 +118,6 @@ const FranchiseManagementPage: React.FC = () => {
         />
       )}
 
-      {activeAcademyId && <SkillParametersCard academyId={activeAcademyId} />}
-
       {activeAcademyId && isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-lg" />)}
@@ -143,6 +152,25 @@ const FranchiseManagementPage: React.FC = () => {
               <div className="flex items-center gap-3 text-2xs text-slate-500">
                 <span>Max {f.maxStudents} students</span>
                 {f.ageGroups?.length > 0 && <span>· {f.ageGroups.join(", ")}</span>}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-2xs text-slate-500">Skills:</span>
+                {f.skillParameters?.length ? (
+                  f.skillParameters.map((skill) => (
+                    <Badge key={skill} variant="gray" size="sm">
+                      {skill}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-2xs text-slate-500 italic">None set</span>
+                )}
+                <button
+                  onClick={() => openSkillModal(f)}
+                  className="ml-auto text-slate-400 hover:text-volt-400 transition-colors"
+                  title="Manage skills"
+                >
+                  <Pencil size={14} />
+                </button>
               </div>
               <div className="flex items-center gap-3 pt-2 border-t border-white/5">
                 <button
@@ -179,6 +207,13 @@ const FranchiseManagementPage: React.FC = () => {
               toast.error(err?.data?.message || "Couldn't create franchise — try again");
             }
           }}
+        />
+      )}
+
+      {isSkillModalOpen && editingFranchise && (
+        <FranchiseSkillModal
+          franchise={editingFranchise}
+          onClose={closeSkillModal}
         />
       )}
     </div>
@@ -231,23 +266,20 @@ const CreateFranchiseModal: React.FC<{
   );
 };
 
-const SkillParametersCard: React.FC<{ academyId: string }> = ({ academyId }) => {
-  const { data: academy, isLoading } = academyApi.useGetAcademyByIdQuery(academyId, { skip: !academyId });
-  const [updateConfig, { isLoading: saving }] = academyApi.useUpdateAcademyConfigMutation();
-
-  const [skills, setSkills] = useState<string[]>([]);
+const FranchiseSkillModal: React.FC<{
+  franchise: Franchise;
+  onClose: () => void;
+}> = ({ franchise, onClose }) => {
+  const [updateFranchise, { isLoading }] = useUpdateFranchiseMutation();
+  const [skills, setSkills] = useState<string[]>(franchise.skillParameters || []);
   const [newSkill, setNewSkill] = useState("");
   const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (academy && !dirty) setSkills(academy.skillParameters ?? []);
-  }, [academy, dirty]);
 
   const addSkill = () => {
     const trimmed = newSkill.trim();
     if (!trimmed) return;
     if (skills.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
-      toast.error("That skill parameter already exists");
+      toast.error("That skill already exists");
       return;
     }
     setSkills((prev) => [...prev, trimmed]);
@@ -262,64 +294,65 @@ const SkillParametersCard: React.FC<{ academyId: string }> = ({ academyId }) => 
 
   const handleSave = async () => {
     if (skills.length === 0) {
-      toast.error("Keep at least one skill parameter — coaches need something to score against");
+      toast.error("Keep at least one skill parameter");
       return;
     }
     try {
-      await updateConfig({ id: academyId, config: { skillParameters: skills } }).unwrap();
-      toast.success("Skill parameters updated");
+      await updateFranchise({
+        id: franchise.id,
+        data: { skillParameters: skills },
+      }).unwrap();
+      toast.success("Skills updated for this franchise");
       setDirty(false);
+      onClose();
     } catch (err: any) {
-      toast.error(err?.data?.message || "Couldn't update skill parameters — try again");
+      toast.error(err?.data?.message || "Update failed");
     }
   };
 
-  if (isLoading) return <Skeleton className="h-32 rounded-lg" />;
-  if (!academy) return null;
-
   return (
-    <div className="card p-5 space-y-3">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <ListChecks size={16} className="text-volt-400" />
-          <div>
-            <p className="font-display font-bold text-white text-sm uppercase tracking-wide">Skill Parameters</p>
-            <p className="text-2xs text-slate-500 mt-0.5">
-              Coaches can only score players against these — used whenever performance is marked for a session.
-            </p>
-          </div>
+    <Modal isOpen onClose={onClose} title={`Manage skills – ${franchise.name}`} size="md">
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2 p-3 bg-white/5 rounded border border-white/5">
+          {skills.map((skill, idx) => (
+            <div key={`${skill}-${idx}`} className="flex items-center gap-2 bg-pitch-700 px-2 py-1 rounded text-xs text-white">
+              {skill}
+              <button type="button" className="text-ember-400 hover:text-ember-300" onClick={() => removeSkill(idx)}>
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          {skills.length === 0 && (
+            <p className="text-2xs text-slate-500">No skills defined for this franchise.</p>
+          )}
         </div>
-        {dirty && (
-          <Button size="sm" loading={saving} onClick={handleSave}>Save changes</Button>
-        )}
+        <div className="flex items-center gap-2">
+          <input
+            className="input flex-1"
+            placeholder="e.g. Dribbling"
+            value={newSkill}
+            onChange={(e) => setNewSkill(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addSkill();
+              }
+            }}
+          />
+          <Button type="button" variant="secondary" icon={<Plus size={14} />} onClick={addSkill}>
+            Add
+          </Button>
+        </div>
+        <div className="flex gap-3 pt-2">
+          <Button type="button" loading={isLoading} onClick={handleSave} disabled={!dirty}>
+            Save changes
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2 p-3 bg-white/5 rounded border border-white/5">
-        {skills.map((skill, idx) => (
-          <div key={`${skill}-${idx}`} className="flex items-center gap-2 bg-pitch-700 px-2 py-1 rounded text-xs text-white">
-            {skill}
-            <button type="button" className="text-ember-400 hover:text-ember-300" onClick={() => removeSkill(idx)}>
-              <X size={12} />
-            </button>
-          </div>
-        ))}
-        {skills.length === 0 && <p className="text-2xs text-slate-500">No skill parameters yet — add at least one below.</p>}
-      </div>
-      <div className="flex items-center gap-2">
-        <input
-          className="input flex-1"
-          placeholder="e.g. First Touch"
-          value={newSkill}
-          onChange={(e) => setNewSkill(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addSkill();
-            }
-          }}
-        />
-        <Button type="button" variant="secondary" icon={<Plus size={14} />} onClick={addSkill}>Add</Button>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

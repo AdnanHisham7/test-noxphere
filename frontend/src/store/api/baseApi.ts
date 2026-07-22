@@ -91,6 +91,7 @@ export const baseApi = createApi({
     "Schedule",
     "Dashboard",
     "Finance",
+    "Resource",
   ],
   endpoints: () => ({}),
 });
