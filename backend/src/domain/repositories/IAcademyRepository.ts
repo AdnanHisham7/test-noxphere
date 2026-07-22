@@ -21,9 +21,7 @@ export interface IAcademyRepository {
     filters?: { isActive?: boolean; search?: string },
     options?: PaginationOptions,
   ): Promise<PaginatedResult<AcademyEntity>>;
-  create(
-    academy: Omit<AcademyEntity, "id" | "createdAt" | "updatedAt">,
-  ): Promise<AcademyEntity>;
+  create(data: CreateAcademyEntity): Promise<AcademyEntity>;
   update(
     id: string,
     updates: Partial<AcademyEntity>,

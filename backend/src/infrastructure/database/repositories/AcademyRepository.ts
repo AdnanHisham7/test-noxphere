@@ -3,7 +3,7 @@ import {
   PaginationOptions,
   PaginatedResult,
 } from "../../../domain/repositories/IAcademyRepository";
-import { AcademyEntity } from "../../../domain/entities/Academy.entity";
+import { AcademyEntity, CreateAcademyEntity } from "../../../domain/entities/Academy.entity";
 import { AcademyModel, AcademyDocument } from "../models/Academy.model";
 
 export class MongoAcademyRepository implements IAcademyRepository {
@@ -86,10 +86,8 @@ export class MongoAcademyRepository implements IAcademyRepository {
     };
   }
 
-  async create(
-    academy: Omit<AcademyEntity, "id" | "createdAt" | "updatedAt">,
-  ): Promise<AcademyEntity> {
-    const doc = await AcademyModel.create(academy);
+  async create(data: CreateAcademyEntity): Promise<AcademyEntity> {
+    const doc = await AcademyModel.create(data);
     return this.toEntity(doc);
   }
 
