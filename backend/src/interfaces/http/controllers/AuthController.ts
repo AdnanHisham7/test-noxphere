@@ -28,6 +28,7 @@ export class AuthController {
       const result = await this.authUseCases.login(dto);
       ResponseHandler.success(res, result, 'Login successful');
     } catch (err) {
+      console.log('Error in login controller:', err);
       next(err);
     }
   };

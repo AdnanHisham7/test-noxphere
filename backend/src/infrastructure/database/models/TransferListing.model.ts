@@ -4,6 +4,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface TransferListingDocument extends Document {
   studentId: mongoose.Types.ObjectId;
   fromFranchiseId: mongoose.Types.ObjectId;
+  academyId: mongoose.Types.ObjectId;
   fromManagerId: mongoose.Types.ObjectId;
   price: number;
   currency: string;
@@ -23,6 +24,7 @@ const TransferListingSchema = new Schema<TransferListingDocument>(
   {
     studentId: { type: Schema.Types.ObjectId, ref: "Student", required: true, index: true },
     fromFranchiseId: { type: Schema.Types.ObjectId, ref: "Franchise", required: true, index: true },
+    academyId: { type: Schema.Types.ObjectId, ref: "Academy", required: true, index: true },
     fromManagerId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     price: { type: Number, required: true, min: 0 },
     currency: { type: String, default: "INR" },

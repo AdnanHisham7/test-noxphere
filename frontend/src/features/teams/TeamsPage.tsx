@@ -143,7 +143,7 @@ const TeamsPage: React.FC = () => {
                   <img src={team.bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />
                 )}
               </div>
-              <div className="p-5 flex flex-col flex-1 -mt-6">
+              <div className="p-5 flex flex-col flex-1 -mt-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     {team.logoUrl ? (

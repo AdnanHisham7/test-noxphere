@@ -12,6 +12,7 @@ export interface AcademyDocument extends Document {
   ageGroups: string[];
   maxStudents: number;
   isActive: boolean;
+  transferWallEnabled: boolean;
   alertBeforeMinutes: number;
   notificationAlertAfterMinutes: number;
   skillParameters: string[];
@@ -45,6 +46,7 @@ const AcademySchema = new Schema<AcademyDocument>(
     ageGroups: [{ type: String }],
     maxStudents: { type: Number, default: 100 },
     isActive: { type: Boolean, default: true, index: true },
+    transferWallEnabled: { type: Boolean, default: true },
     alertBeforeMinutes: { type: Number, default: 60 },
     notificationAlertAfterMinutes: { type: Number, default: 15 },
     skillParameters: {

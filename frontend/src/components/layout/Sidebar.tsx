@@ -27,6 +27,7 @@ import { clearCredentials } from '../../store/slices/authSlice';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 import { Avatar } from '../ui';
 import { useLogoutMutation } from '../../store/api/authApi';
+import { useTransferWallEnabled } from '../../hooks/useTransferWallEnabled';
 
 interface NavItem {
   path: string;
@@ -73,8 +74,11 @@ export const Sidebar: React.FC = () => {
     sidebarCollapsed: s.ui.sidebarCollapsed,
     unreadCount: s.notifications.unreadCount,
   }));
+  const transferWallEnabled = useTransferWallEnabled();
 
-  const navItems = navConfig[user?.role || 'manager'] || [];
+  const navItems = (navConfig[user?.role || 'manager'] || []).filter(
+    (item) => item.path !== '/transfer-wall' || transferWallEnabled,
+  );
   const [logoutRequest] = useLogoutMutation();
 
   const handleLogout = async () => {
@@ -145,7 +149,7 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Transfer Wall quick access */}
-      {!sidebarCollapsed && (
+      {!sidebarCollapsed && transferWallEnabled && (
         <div className="px-4 py-3 mx-2 mb-3 bg-ice-400/8 border border-ice-400/15 rounded">
           <p className="text-2xs text-ice-400 uppercase tracking-widest font-bold mb-1">Transfer Wall</p>
           <p className="text-xs text-slate-500">Public portal active</p>

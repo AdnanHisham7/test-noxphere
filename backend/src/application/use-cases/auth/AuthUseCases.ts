@@ -47,15 +47,17 @@ export class AuthUseCases {
   }
 
   async login(dto: LoginDto): Promise<AuthResult> {
+    console.log('Attempting login for email:', dto.email);
     const user = await this.userRepository.findByEmail(dto.email);
+    console.log('User found during login:', user);
     if (!user) {
       throw new UnauthorizedError('Invalid credentials');
     }
-
+    
     if (!user.isActive) {
       throw new UnauthorizedError('Account is deactivated');
     }
-
+    
     // Need to explicitly select passwordHash since it's excluded by default
     const userWithPassword = await this.userRepository.findByEmailWithPassword(dto.email);
     if (!userWithPassword) throw new UnauthorizedError('Invalid credentials');
@@ -66,12 +68,13 @@ export class AuthUseCases {
     }
 
     await this.userRepository.update(user.id, { lastLoginAt: new Date() });
-
+    
     if (dto.fcmToken) {
       await this.userRepository.addFcmToken(user.id, dto.fcmToken);
     }
-
+    
     const tokens = this.generateTokens(user);
+    console.log('Tokens generated during login:', tokens);
     return { user, tokens };
   }
 

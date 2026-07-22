@@ -66,6 +66,13 @@ export const academyApi = baseApi.injectEndpoints({
       // because the IDs will match.
       invalidatesTags: (result, error, id) => [{ type: "Academy", id }],
     }),
+    toggleTransferWall: builder.mutation<Academy, string>({
+      query: (id) => ({
+        url: `/academies/${id}/transfer-wall`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (result, error, id) => [{ type: "Academy", id }],
+    }),
     deleteAcademy: builder.mutation<void, string>({
       query: (id) => ({ url: `/academies/${id}`, method: "DELETE" }),
       invalidatesTags: [{ type: "Academy", id: "LIST" }],

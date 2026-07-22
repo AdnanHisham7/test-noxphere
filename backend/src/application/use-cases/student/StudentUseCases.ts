@@ -15,7 +15,6 @@ import {
   CreateStudentDto,
   UpdateStudentDto,
   AddCoachRemarkDto,
-  ListOnTransferDto,
 } from "../../dtos/student.dto";
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
@@ -191,20 +190,6 @@ export class StudentUseCases {
       text: dto.text,
       date: new Date(),
     });
-  }
-
-  async listOnTransferWall(
-    studentId: string,
-    dto: ListOnTransferDto,
-  ): Promise<StudentEntity> {
-    const student = await this.studentRepo.update(studentId, {
-      transferStatus: "listed",
-      transferPrice: dto.price,
-      transferNote: dto.note,
-      transferListedAt: new Date(),
-    });
-    if (!student) throw new NotFoundError("Student");
-    return student;
   }
 
   async getPlayerCard(studentId: string): Promise<any> {

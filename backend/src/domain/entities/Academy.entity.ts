@@ -24,6 +24,7 @@ export interface AcademyEntity {
   ageGroups: string[];
   maxStudents: number;
   isActive: boolean;
+  transferWallEnabled: boolean;
   alertBeforeMinutes: number;
   notificationAlertAfterMinutes: number;
   skillParameters: string[];

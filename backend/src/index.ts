@@ -87,7 +87,7 @@ const limiter = rateLimit({
     message: "Too many requests, please try again later.",
   },
 });
-app.use(config.apiPrefix, limiter);
+// app.use(config.apiPrefix, limiter);
 
 // ─── General Middleware ────────────────────────────────────────────────────────
 app.use(compression());

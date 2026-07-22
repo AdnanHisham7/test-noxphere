@@ -195,6 +195,13 @@ export class AcademyUseCases {
     // super_admin is unrestricted. This is what makes skillParameters
     // genuinely "defined by the manager of the academy" rather than only
     // reachable through the super_admin-only Academies page.
+    // A manager may only edit the academy their own franchise belongs to,
+    // and — since this endpoint is shared with super_admin — only the
+    // skillParameters field, never isActive or anything else the schema
+    // might carry. Whitelisting here (rather than blacklisting isActive)
+    // means a future field added to AcademyConfigSchema doesn't silently
+    // become manager-editable too.
+    let effectiveDto = dto;
     if (requester && requester.role === "manager") {
       if (!requester.franchiseId) {
         throw new ForbiddenError("Your account isn't linked to a franchise");
@@ -203,9 +210,10 @@ export class AcademyUseCases {
       if (!franchise || franchise.academyId.toString() !== id) {
         throw new ForbiddenError("You can only configure your own academy");
       }
+      effectiveDto = { skillParameters: dto.skillParameters };
     }
 
-    const updated = await this.academyRepository.update(id, dto);
+    const updated = await this.academyRepository.update(id, effectiveDto);
     if (!updated) throw new NotFoundError("Academy");
     return updated;
   }
@@ -216,6 +224,17 @@ export class AcademyUseCases {
 
     const updated = await this.academyRepository.update(id, {
       isActive: !academy.isActive,
+    });
+    if (!updated) throw new NotFoundError("Academy");
+    return updated;
+  }
+
+  async toggleTransferWall(id: string): Promise<AcademyEntity> {
+    const academy = await this.academyRepository.findById(id);
+    if (!academy) throw new NotFoundError("Academy");
+
+    const updated = await this.academyRepository.update(id, {
+      transferWallEnabled: !academy.transferWallEnabled,
     });
     if (!updated) throw new NotFoundError("Academy");
     return updated;

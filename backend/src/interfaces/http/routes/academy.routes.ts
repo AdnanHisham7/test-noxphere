@@ -60,6 +60,14 @@ academyRouter.patch(
   },
 );
 
+academyRouter.patch(
+  "/:id/transfer-wall",
+  authorize("super_admin"),
+  (req, res, next) => {
+    req.app.locals.controllers.academy.toggleTransferWall(req, res, next);
+  },
+);
+
 academyRouter.delete("/:id", authorize("super_admin"), (req, res, next) => {
   req.app.locals.controllers.academy.delete(req, res, next);
 });

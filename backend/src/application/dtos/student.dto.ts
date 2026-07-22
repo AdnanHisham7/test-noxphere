@@ -50,14 +50,8 @@ export const AddCoachRemarkSchema = z.object({
   text: z.string().min(1),
 });
 
-export const ListOnTransferSchema = z.object({
-  price: z.number().min(0),
-  note: z.string().optional(),
-});
-
 export type CreateStudentDto = z.infer<typeof CreateStudentSchema>;
 export type UpdateStudentDto = z.infer<typeof UpdateStudentSchema>;
 export type AddPerformanceDto = z.infer<typeof AddPerformanceSchema>;
 export type MarkAttendanceDto = z.infer<typeof MarkAttendanceSchema>;
 export type AddCoachRemarkDto = z.infer<typeof AddCoachRemarkSchema>;
-export type ListOnTransferDto = z.infer<typeof ListOnTransferSchema>;

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { StudentUseCases } from '../../../application/use-cases/student/StudentUseCases';
 import { ResponseHandler } from '../../../shared/utils/ResponseHandler';
-import { CreateStudentSchema, UpdateStudentSchema, AddCoachRemarkSchema, ListOnTransferSchema } from '../../../application/dtos/student.dto';
+import { CreateStudentSchema, UpdateStudentSchema, AddCoachRemarkSchema } from '../../../application/dtos/student.dto';
 
 export class StudentController {
   constructor(private studentUseCases: StudentUseCases) {}
@@ -70,14 +70,6 @@ export class StudentController {
       const dto = AddCoachRemarkSchema.parse(req.body);
       const remark = await this.studentUseCases.addCoachRemark(req.params.id, dto, req.user!.sub);
       ResponseHandler.success(res, remark, 'Remark added');
-    } catch (err) { next(err); }
-  };
-
-  listOnTransfer = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const dto = ListOnTransferSchema.parse(req.body);
-      const student = await this.studentUseCases.listOnTransferWall(req.params.id, dto);
-      ResponseHandler.success(res, student, 'Student listed on transfer wall');
     } catch (err) { next(err); }
   };
 

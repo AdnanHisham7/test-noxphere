@@ -31,11 +31,6 @@ studentRouter.post('/:id/remarks', authenticate, requirePermission('canManagePer
   req.app.locals.controllers.student.addCoachRemark(req, res, next);
 });
 
-// Transfer Wall
-studentRouter.post('/:id/transfer', authenticate, requirePermission('canManageFranchises'), (req, res, next) => {
-  req.app.locals.controllers.student.listOnTransfer(req, res, next);
-});
-
 // Player Card (public? use authentication)
 studentRouter.get('/:id/playercard', authenticate, (req, res, next) => {
   req.app.locals.controllers.student.getPlayerCard(req, res, next);

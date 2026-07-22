@@ -2,6 +2,8 @@
 import { TransferListingModel } from "../../../infrastructure/database/models/TransferListing.model";
 import { TransferRequestModel } from "../../../infrastructure/database/models/TransferRequest.model";
 import { StudentModel } from "../../../infrastructure/database/models/Student.model";
+import { FranchiseModel } from "../../../infrastructure/database/models/Franchise.model";
+import { AcademyModel } from "../../../infrastructure/database/models/Academy.model";
 import { notificationService } from "../../../infrastructure/services/NotificationService";
 import { NotFoundError, BadRequestError, ForbiddenError, ConflictError } from "../../../shared/errors/AppError";
 
@@ -42,6 +44,26 @@ function listingCard(listing: any) {
 }
 
 export class TransferUseCases {
+  /**
+   * Every listing is denormalized with its academyId at creation time so
+   * public browsing can filter without a join per request. The toggle
+   * itself lives on Academy and can change after a listing exists, so we
+   * always re-check the *current* Academy state here rather than trusting
+   * the stored academyId to mean "still enabled".
+   */
+  private async getDisabledAcademyIds(): Promise<string[]> {
+    const disabled = await AcademyModel.find({ transferWallEnabled: false }).select("_id").lean();
+    return disabled.map((a) => a._id.toString());
+  }
+
+  private async resolveAcademyForFranchise(franchiseId: string) {
+    const franchise = await FranchiseModel.findById(franchiseId).select("academyId").lean();
+    if (!franchise) throw new NotFoundError("Franchise");
+    const academy = await AcademyModel.findById(franchise.academyId).select("transferWallEnabled").lean();
+    if (!academy) throw new NotFoundError("Academy");
+    return academy;
+  }
+
   async getPublicListings(filters: {
     page: number;
     limit: number;
@@ -56,6 +78,11 @@ export class TransferUseCases {
     const query: Record<string, unknown> = { isActive: true, isPublic: true };
     if (filters.minRating) query.overallRating = { $gte: filters.minRating };
     if (filters.maxPrice) query.price = { $lte: filters.maxPrice };
+
+    const disabledAcademyIds = await this.getDisabledAcademyIds();
+    if (disabledAcademyIds.length > 0) {
+      query.academyId = { $nin: disabledAcademyIds };
+    }
 
     const studentMatch: Record<string, unknown> = {};
     if (filters.position) studentMatch.position = filters.position;
@@ -100,6 +127,8 @@ export class TransferUseCases {
       )
       .populate("fromFranchiseId", "name");
     if (!listing) throw new NotFoundError("Transfer listing");
+    const academy = await AcademyModel.findById(listing.academyId).select("transferWallEnabled").lean();
+    if (!academy || !academy.transferWallEnabled) throw new NotFoundError("Transfer listing");
     listing.viewCount += 1;
     await listing.save();
     return listingCard(listing);
@@ -112,12 +141,18 @@ export class TransferUseCases {
     const student = await StudentModel.findById(input.studentId);
     if (!student) throw new NotFoundError("Student");
 
+    const academy = await this.resolveAcademyForFranchise(student.franchiseId.toString());
+    if (!academy.transferWallEnabled) {
+      throw new ForbiddenError("The transfer wall is disabled for your academy — contact your platform admin");
+    }
+
     const existing = await TransferListingModel.findOne({ studentId: input.studentId, isActive: true });
     if (existing) throw new ConflictError("This player is already listed on the transfer wall");
 
     const listing = await TransferListingModel.create({
       studentId: input.studentId,
       fromFranchiseId: student.franchiseId,
+      academyId: academy._id,
       fromManagerId: input.managerId,
       price: input.price,
       currency: input.currency ?? "INR",
@@ -188,6 +223,8 @@ export class TransferUseCases {
   }) {
     const listing = await TransferListingModel.findById(input.listingId);
     if (!listing || !listing.isActive) throw new NotFoundError("Transfer listing");
+    const academy = await AcademyModel.findById(listing.academyId).select("transferWallEnabled").lean();
+    if (!academy || !academy.transferWallEnabled) throw new NotFoundError("Transfer listing");
     if (listing.fromManagerId.toString() === input.toManagerId) {
       throw new BadRequestError("You cannot request your own listed player");
     }

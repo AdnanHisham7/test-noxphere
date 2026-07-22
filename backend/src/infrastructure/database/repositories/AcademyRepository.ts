@@ -29,6 +29,7 @@ export class MongoAcademyRepository implements IAcademyRepository {
       ageGroups: doc.ageGroups,
       maxStudents: doc.maxStudents,
       isActive: doc.isActive,
+      transferWallEnabled: doc.transferWallEnabled,
       alertBeforeMinutes: doc.alertBeforeMinutes,
       notificationAlertAfterMinutes: doc.notificationAlertAfterMinutes,
       skillParameters: doc.skillParameters,

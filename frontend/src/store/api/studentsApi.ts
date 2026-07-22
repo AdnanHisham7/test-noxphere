@@ -131,10 +131,6 @@ export const studentsApi = baseApi.injectEndpoints({
       query: ({ id, data }) => ({ url: `/students/${id}/remarks`, method: 'POST', body: data }),
       invalidatesTags: (_, __, { id }) => [{ type: 'Student', id }],
     }),
-    listOnTransfer: builder.mutation<unknown, { id: string; data: { price: number; note?: string } }>({
-      query: ({ id, data }) => ({ url: `/students/${id}/transfer`, method: 'POST', body: data }),
-      invalidatesTags: (_, __, { id }) => [{ type: 'Student', id }, 'Transfer'],
-    }),
     getPlayerCard: builder.query<PlayerCard, string>({
       query: (id) => `/students/${id}/playercard`,
       transformResponse: (res: { data: PlayerCard }) => res.data,
@@ -151,6 +147,5 @@ export const {
   useUpdateStudentPhotoMutation,
   useDeleteStudentMutation,
   useAddCoachRemarkMutation,
-  useListOnTransferMutation,
   useGetPlayerCardQuery,
 } = studentsApi;

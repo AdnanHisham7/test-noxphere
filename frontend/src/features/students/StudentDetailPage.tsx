@@ -15,8 +15,10 @@ import {
   CartesianGrid,
 } from "recharts";
 import { clsx } from "clsx";
+import { Repeat2, Mail } from "lucide-react";
 import { Button, Badge, Avatar, Modal, Skeleton, EmptyState } from "../../components/ui";
 import { toast } from "react-hot-toast";
+import { useTransferWallEnabled } from "../../hooks/useTransferWallEnabled";
 import mannequinPng from "../../assets/players/mannequin.png";
 import { PlayerPlaceholder } from "@/components/ui/PlayerPlaceholder";
 import { jsPDF } from "jspdf";
@@ -55,6 +57,7 @@ const StudentDetailPage: React.FC = () => {
   const [listPlayer, { isLoading: listing }] = useListPlayerMutation();
   const [uploadImage, { isLoading: uploadingPhoto }] = useUploadImageMutation();
   const [updateStudentPhoto] = useUpdateStudentPhotoMutation();
+  const transferWallEnabled = useTransferWallEnabled();
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoChange = async (file: File | undefined) => {
@@ -358,14 +361,14 @@ const StudentDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                {student.transferStatus !== "listed" && student.transferStatus !== "sold" && (
-                  <Button size="sm" variant="secondary" icon={<span>↔</span>} onClick={() => setTransferModal(true)}>
+                {student.transferStatus !== "listed" && student.transferStatus !== "sold" && transferWallEnabled && (
+                  <Button size="sm" variant="secondary" icon={<Repeat2 size={14} />} onClick={() => setTransferModal(true)}>
                     List on Transfer Wall
                   </Button>
                 )}
 
                 <a href={`mailto:${student.guardian.email}`} className="btn-secondary text-xs py-1.5 px-3 inline-flex items-center gap-2">
-                  <span>📨</span> Message Guardian
+                  <Mail size={13} /> Message Guardian
                 </a>
               </div>
             </div>

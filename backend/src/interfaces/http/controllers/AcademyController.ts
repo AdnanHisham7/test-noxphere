@@ -80,6 +80,20 @@ export class AcademyController {
     }
   };
 
+  toggleTransferWall = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const academy = await this.academyUseCases.toggleTransferWall(id);
+      ResponseHandler.success(
+        res,
+        academy,
+        `Transfer wall ${academy.transferWallEnabled ? 'enabled' : 'disabled'}`,
+      );
+    } catch (err) {
+      next(err);
+    }
+  };
+
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
