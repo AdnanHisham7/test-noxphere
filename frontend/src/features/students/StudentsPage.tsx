@@ -101,8 +101,8 @@ const PlayerCardContent: React.FC<PlayerCardContentProps> = ({
         </div>
 
         <div className="flex items-center justify-between">
-          <Badge variant={selectionBadge[student.selectionStatus].variant} size="sm">
-            {selectionBadge[student.selectionStatus].label}
+          <Badge variant={selectionBadge[student.selectionStatus]?.variant} size="sm">
+            {selectionBadge[student.selectionStatus]?.label}
           </Badge>
 
           <div className="text-right">
@@ -410,8 +410,8 @@ const StudentsPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
-                    <Badge variant={selectionBadge[student.selectionStatus].variant}>
-                      {selectionBadge[student.selectionStatus].label}
+                    <Badge variant={selectionBadge[student.selectionStatus]?.variant}>
+                      {selectionBadge[student.selectionStatus]?.label}
                     </Badge>
                   </td>
                   <td className="px-4 py-3">

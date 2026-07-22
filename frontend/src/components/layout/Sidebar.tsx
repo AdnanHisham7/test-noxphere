@@ -51,7 +51,7 @@ const navConfig: Record<string, NavItem[]> = {
     { path: '/teams', label: 'Teams', icon: Shield },
     { path: '/coaches', label: 'Coaches', icon: UserCog },
     { path: '/fees', label: 'Fees', icon: CreditCard },
-    { path: '/selection', label: 'Selection', icon: Target },
+    // { path: '/selection', label: 'Selection', icon: Target },
     { path: '/transfer-wall', label: 'Transfer Wall', icon: Repeat2 },
     // "Sessions" covers scheduling, viewing, and marking attendance /
     // performance for every session — those no longer need their own
@@ -63,7 +63,7 @@ const navConfig: Record<string, NavItem[]> = {
   coach: [
     { path: '/coach/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/students', label: 'Squad', icon: Shirt },
-    { path: '/selection', label: 'Selection', icon: Target },
+    // { path: '/selection', label: 'Selection', icon: Target },
     { path: '/schedule', label: 'Sessions', icon: CalendarClock },
     { path: '/resources', label: 'Resources', icon: FolderOpen },
     { path: '/notifications', label: 'Alerts', icon: Bell },
