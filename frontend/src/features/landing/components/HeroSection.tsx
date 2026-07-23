@@ -2,6 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import OrbitSystem from "./OrbitSystem";
+import logoSrc from "@/assets/logo-transparent.png";
 
 export const HeroSection: React.FC = () => {
   return (
@@ -47,7 +48,7 @@ export const HeroSection: React.FC = () => {
           transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
           className="relative"
         >
-          <OrbitSystem variant="hero" className="w-full max-w-[520px] mx-auto" />
+          <OrbitSystem variant="hero" className="w-full max-w-[520px] mx-auto" logoSrc={logoSrc} />
 
           <div className="absolute left-1/2 -translate-x-1/2 bottom-2 md:bottom-6 nox-card px-5 py-4 flex items-center gap-5 animate-orbit-float">
             <div>

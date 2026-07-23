@@ -33,11 +33,14 @@ function pointOn(radius: number, angleDeg: number) {
 interface OrbitSystemProps {
   /** "hero" renders full size with labelled nodes, "compact" is a small decorative version */
   variant?: "hero" | "compact";
+  /** Path or URL to your transparent PNG logo */
+  logoSrc?: string;
   className?: string;
 }
 
 export const OrbitSystem: React.FC<OrbitSystemProps> = ({
   variant = "hero",
+  logoSrc = "/assets/logo.png",
   className = "",
 }) => {
   const showLabels = variant === "hero";
@@ -50,6 +53,28 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
       aria-label="Noxphere orbital system: students, attendance, fees, coaches, batches and reports connected around one core"
     >
       <defs>
+        <style>{`
+          @keyframes nox-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes nox-spin-reverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+          }
+          .animate-orbit-slow {
+            animation: nox-spin 25s linear infinite;
+          }
+          .animate-orbit-reverse {
+            animation: nox-spin-reverse 35s linear infinite;
+          }
+          .animate-counter-slow {
+            animation: nox-spin-reverse 25s linear infinite;
+          }
+          .animate-counter-reverse {
+            animation: nox-spin 35s linear infinite;
+          }
+        `}</style>
         <radialGradient id="nox-core-grad" cx="50%" cy="45%" r="60%">
           <stop offset="0%" stopColor="#e0ff66" />
           <stop offset="55%" stopColor="#ccff00" />
@@ -97,6 +122,7 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
           const p = pointOn(INNER_R, node.angle);
           return (
             <g key={node.label}>
+              {/* Dot indicator */}
               <circle cx={p.x} cy={p.y} r={7} fill="#ccff00" />
               <circle
                 cx={p.x}
@@ -106,6 +132,30 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
                 stroke="#ccff00"
                 strokeOpacity="0.35"
               />
+
+              {/* Label group counter-rotates around dot center (p.x, p.y) */}
+              {showLabels && (
+                <g
+                  className="animate-counter-slow"
+                  style={{ transformOrigin: `${p.x}px ${p.y}px` }}
+                >
+                  <text
+                    x={p.x}
+                    y={p.y + 24}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: "0.04em",
+                      fill: "#e2e8f0",
+                    }}
+                  >
+                    {node.label}
+                  </text>
+                </g>
+              )}
             </g>
           );
         })}
@@ -120,6 +170,7 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
           const p = pointOn(OUTER_R, node.angle);
           return (
             <g key={node.label}>
+              {/* Dot indicator */}
               <circle cx={p.x} cy={p.y} r={6} fill="#6e8bff" />
               <circle
                 cx={p.x}
@@ -129,32 +180,36 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
                 stroke="#6e8bff"
                 strokeOpacity="0.3"
               />
+
+              {/* Label group counter-rotates around dot center (p.x, p.y) */}
+              {showLabels && (
+                <g
+                  className="animate-counter-reverse"
+                  style={{ transformOrigin: `${p.x}px ${p.y}px` }}
+                >
+                  <text
+                    x={p.x}
+                    y={p.y + 24}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: "0.04em",
+                      fill: "#e2e8f0",
+                    }}
+                  >
+                    {node.label}
+                  </text>
+                </g>
+              )}
             </g>
           );
         })}
       </g>
 
-      {/* labels — rendered static (not rotating) so they stay legible */}
-      {showLabels &&
-        [...INNER_NODES.map((n) => ({ ...n, r: INNER_R + 26 })), ...OUTER_NODES.map((n) => ({ ...n, r: OUTER_R + 26 }))].map(
-          (node) => {
-            const p = pointOn(node.r, node.angle);
-            return (
-              <text
-                key={node.label}
-                x={p.x}
-                y={p.y}
-                textAnchor="middle"
-                className="fill-nox-mid"
-                style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.04em" }}
-              >
-                {node.label}
-              </text>
-            );
-          },
-        )}
-
-      {/* the core */}
+      {/* Center Core */}
       <circle
         cx={CENTER}
         cy={CENTER}
@@ -163,7 +218,26 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
         className="animate-core-pulse"
         style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
       />
-      <circle cx={CENTER} cy={CENTER} r={54} fill="none" stroke="#0a0a0f" strokeWidth="2" />
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        r={54}
+        fill="none"
+        stroke="#0a0a0f"
+        strokeWidth="2"
+      />
+
+      {/* Center Logo */}
+      {logoSrc && (
+        <image
+          href={logoSrc}
+          x={CENTER - 32}
+          y={CENTER - 32}
+          width={64}
+          height={64}
+          preserveAspectRatio="xMidYMid meet"
+        />
+      )}
     </svg>
   );
 };

@@ -1,6 +1,7 @@
 // src/features/landing/components/LandingNavbar.tsx
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import logoSrc from "@/assets/logo.png"; // Update this path to match your PNG location
 
 const LINKS = [
   { href: "#features", label: "Features" },
@@ -26,9 +27,11 @@ export const LandingNavbar: React.FC = () => {
     >
       <nav className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
         <a href="#top" className="flex items-center gap-2">
-          <span className="relative flex items-center justify-center w-8 h-8 rounded-full bg-orbit-cta shadow-core-glow">
-            <span className="absolute inset-0 rounded-full border border-white/30" />
-          </span>
+          <img
+            src={logoSrc}
+            alt="Noxphere Logo"
+            className="w-8 h-8 object-contain"
+          />
           <span className="font-orbital font-semibold text-lg tracking-tight text-nox-high">
             Noxphere
           </span>
