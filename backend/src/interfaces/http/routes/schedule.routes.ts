@@ -1,18 +1,18 @@
 // src/interfaces/http/routes/schedule.routes.ts
 import { Router } from "express";
-import { authenticate, requirePermission } from "../middleware/auth.middleware";
+import { authenticate, requirePermission, enforceCoachOwnFranchise } from "../middleware/auth.middleware";
 
 export const scheduleRouter = Router();
 
 scheduleRouter.use(authenticate);
 
-scheduleRouter.get("/", (req, res, next) => {
+scheduleRouter.get("/", enforceCoachOwnFranchise, (req, res, next) => {
   req.app.locals.controllers.schedule.list(req, res, next);
 });
 scheduleRouter.get("/:id", (req, res, next) => {
   req.app.locals.controllers.schedule.getById(req, res, next);
 });
-scheduleRouter.post("/", requirePermission("canManageSessions"), (req, res, next) => {
+scheduleRouter.post("/", requirePermission("canManageSessions"), enforceCoachOwnFranchise, (req, res, next) => {
   req.app.locals.controllers.schedule.create(req, res, next);
 });
 scheduleRouter.put("/:id", requirePermission("canManageSessions"), (req, res, next) => {

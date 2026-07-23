@@ -19,6 +19,7 @@ import {
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 import { CoachRemarkModel } from "../../../infrastructure/database/models/CoachRemark.model";
+import { TeamModel } from "../../../infrastructure/database/models/Team.model";
 
 export class StudentUseCases {
   constructor(
@@ -120,17 +121,49 @@ export class StudentUseCases {
     filters: any,
     page = 1,
     limit = 20,
+    restrictToCoachId?: string,
   ): Promise<{ items: StudentEntity[]; total: number }> {
     const filter: any = { franchiseId, isActive: true };
-    if (filters.teamId) filter.teamId = filters.teamId;
+
+    // A coach only ever sees students on a team assigned to them, or a
+    // student explicitly assigned to them directly (e.g. trial players not
+    // yet placed on a team). Derived fresh from Team.coachId every call so
+    // a team reassignment can never leave a coach seeing a stale roster.
+    let allowedTeamIds: string[] | null = null;
+    if (restrictToCoachId) {
+      const coachTeams = await TeamModel.find({
+        franchiseId,
+        coachId: restrictToCoachId,
+        deletedAt: { $exists: false },
+      })
+        .select("_id")
+        .lean();
+      allowedTeamIds = coachTeams.map((t) => t._id.toString());
+    }
+
+    if (filters.teamId) {
+      if (allowedTeamIds && !allowedTeamIds.includes(filters.teamId)) {
+        return { items: [], total: 0 };
+      }
+      filter.teamId = filters.teamId;
+    } else if (allowedTeamIds) {
+      filter.$or = [{ teamId: { $in: allowedTeamIds } }, { coachId: restrictToCoachId }];
+    }
+
     if (filters.ageGroup) filter.ageGroup = filters.ageGroup;
     if (filters.selectionStatus)
       filter.selectionStatus = filters.selectionStatus;
     if (filters.search) {
-      filter.$or = [
+      const searchOr = [
         { firstName: { $regex: filters.search, $options: "i" } },
         { lastName: { $regex: filters.search, $options: "i" } },
       ];
+      if (filter.$or) {
+        filter.$and = [{ $or: filter.$or }, { $or: searchOr }];
+        delete filter.$or;
+      } else {
+        filter.$or = searchOr;
+      }
     }
     return await this.studentRepo.findAll(filter, page, limit);
   }

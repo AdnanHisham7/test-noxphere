@@ -71,3 +71,29 @@ export const requirePermission = (permission: string) => {
   };
 };
 
+/**
+ * A coach is locked to the single franchise they were assigned at login —
+ * their JWT always carries that franchiseId, and the frontend never lets
+ * them pick another one. This middleware is the server-side backstop for
+ * that rule: even if a request is crafted by hand (or a stale client sends
+ * a leftover franchiseId), a coach can never read or write data scoped to
+ * a franchise other than their own. Managers and super_admins are
+ * untouched — they're allowed to operate across franchises/academies.
+ */
+export const enforceCoachOwnFranchise = (req: Request, _res: Response, next: NextFunction): void => {
+  if (!req.user) {
+    next(new UnauthorizedError());
+    return;
+  }
+  if (req.user.role !== 'coach') {
+    next();
+    return;
+  }
+  const requestedFranchiseId =
+    (req.query.franchiseId as string | undefined) ?? (req.body?.franchiseId as string | undefined);
+  if (requestedFranchiseId && req.user.franchiseId && requestedFranchiseId !== req.user.franchiseId) {
+    next(new ForbiddenError('You can only access data within your assigned franchise'));
+    return;
+  }
+  next();
+};

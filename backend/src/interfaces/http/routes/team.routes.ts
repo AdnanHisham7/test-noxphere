@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { authenticate, requirePermission } from "../middleware/auth.middleware";
+import { authenticate, requirePermission, enforceCoachOwnFranchise } from "../middleware/auth.middleware";
 
 export const teamRouter = Router();
 
 teamRouter.post("/", authenticate, requirePermission("canManageFranchises"), (req, res, next) => {
   req.app.locals.controllers.team.create(req, res, next);
 });
-teamRouter.get("/", authenticate, (req, res, next) => {
+teamRouter.get("/", authenticate, enforceCoachOwnFranchise, (req, res, next) => {
   req.app.locals.controllers.team.list(req, res, next);
 });
 teamRouter.get("/:id", authenticate, (req, res, next) => {

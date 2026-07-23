@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requirePermission } from '../middleware/auth.middleware';
+import { authenticate, requirePermission, enforceCoachOwnFranchise } from '../middleware/auth.middleware';
 
 export const studentRouter = Router();
 
@@ -7,7 +7,7 @@ export const studentRouter = Router();
 studentRouter.post('/', authenticate, requirePermission('canManageFranchises'), (req, res, next) => {
   req.app.locals.controllers.student.create(req, res, next);
 });
-studentRouter.get('/', authenticate, (req, res, next) => {
+studentRouter.get('/', authenticate, enforceCoachOwnFranchise, (req, res, next) => {
   req.app.locals.controllers.student.list(req, res, next);
 });
 studentRouter.get('/:id', authenticate, (req, res, next) => {

@@ -141,6 +141,7 @@ const SessionRosterPage: React.FC = () => {
   }
 
   if (isError || !data) {
+    console.log(isError, data);
     return (
       <EmptyState
         icon={<CalendarDays size={28} />}

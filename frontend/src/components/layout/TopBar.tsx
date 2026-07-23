@@ -1,7 +1,7 @@
 // src/components/layout/TopBar.tsx
 import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Building2, ChevronDown, Check, Bell, Repeat2 } from 'lucide-react';
+import { Building2, ChevronDown, Check, Bell, Repeat2, Lock } from 'lucide-react';
 import { markAllRead } from '../../store/slices/notificationSlice';
 import { setActiveFranchise } from '../../store/slices/uiSlice';
 import { Avatar } from '../ui';
@@ -77,6 +77,39 @@ const FranchiseSwitcher: React.FC = () => {
   );
 };
 
+// A coach is locked to the single franchise they were assigned at login —
+// they can never switch it, so unlike FranchiseSwitcher this renders no
+// dropdown, no chevron, and has no click handler. It exists purely to show
+// the coach which franchise they're operating in.
+const LockedFranchiseBadge: React.FC = () => {
+  const currentFranchiseId = useCurrentFranchiseId();
+  const { data: currentFranchise } = useGetFranchiseByIdQuery(currentFranchiseId ?? '', {
+    skip: !currentFranchiseId,
+  });
+
+  if (!currentFranchiseId) {
+    return (
+      <div className="hidden sm:flex items-center gap-2 bg-pitch-800 border border-white/10 rounded px-3 py-1.5">
+        <Building2 size={13} className="text-volt-400" />
+        <span className="text-xs text-slate-400 font-medium">No franchise assigned</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="hidden sm:flex items-center gap-2 bg-pitch-800 border border-white/10 rounded px-3 py-1.5"
+      title="Your franchise assignment is fixed and cannot be changed"
+    >
+      <Building2 size={13} className="text-volt-400" />
+      <span className="text-xs text-slate-300 font-medium max-w-40 truncate">
+        {currentFranchise?.name ?? 'Loading…'}
+      </span>
+      <Lock size={11} className="text-slate-600" />
+    </div>
+  );
+};
+
 export const TopBar: React.FC = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((s: RootState) => s.auth);
@@ -89,7 +122,11 @@ export const TopBar: React.FC = () => {
     <header className="h-16 bg-pitch-900/80 backdrop-blur-sm border-b border-white/5 flex items-center justify-between px-6 sticky top-0 z-30">
       {/* Left: Franchise selector / breadcrumb */}
       <div className="flex items-center gap-4">
-        {user?.role !== 'super_admin' && <FranchiseSwitcher />}
+        {user?.role === 'coach' ? (
+          <LockedFranchiseBadge />
+        ) : (
+          user?.role !== 'super_admin' && <FranchiseSwitcher />
+        )}
       </div>
 
       {/* Right: Notifications + Profile */}

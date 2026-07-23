@@ -36,6 +36,7 @@ export const errorHandler = (
   // Mongoose duplicate key error
   if ((err as any).code === 11000) {
     const field = Object.keys((err as any).keyValue || {})[0];
+    console.error('Duplicate key error:', err);
     res.status(409).json({
       success: false,
       message: `${field} already exists`,

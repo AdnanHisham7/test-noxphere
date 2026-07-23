@@ -20,11 +20,16 @@ export class StudentController {
       const { franchiseId } = req.query;
       if (!franchiseId) throw new Error('franchiseId is required');
       const { page = 1, limit = 20, search, teamId, ageGroup, selectionStatus } = req.query;
+      // A coach only ever sees players on a team assigned to them (or
+      // explicitly assigned to them directly), regardless of what else
+      // is requested.
+      const restrictToCoachId = req.user!.role === 'coach' ? req.user!.sub : undefined;
       const result = await this.studentUseCases.getStudents(
         franchiseId as string,
         { search, teamId, ageGroup, selectionStatus },
         Number(page),
         Number(limit),
+        restrictToCoachId,
       );
       ResponseHandler.success(res, result, 'Students retrieved');
     } catch (err) { next(err); }

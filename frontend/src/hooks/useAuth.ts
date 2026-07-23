@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '../store';
 import { clearCredentials } from '../store/slices/authSlice';
+import { clearActiveFranchise } from '../store/slices/uiSlice';
 
 export const useAuth = () => {
   const dispatch = useDispatch();
@@ -11,6 +12,7 @@ export const useAuth = () => {
 
   const logout = () => {
     dispatch(clearCredentials());
+    dispatch(clearActiveFranchise());
     navigate('/login');
   };
 
@@ -24,8 +26,3 @@ export const useAuth = () => {
 
   return { user, isAuthenticated, accessToken, logout, hasPermission, hasRole };
 };
-
-
-
-
-

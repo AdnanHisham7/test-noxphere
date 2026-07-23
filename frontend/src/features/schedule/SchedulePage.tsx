@@ -509,7 +509,12 @@ const CreateSessionModal: React.FC<{
   }) => void;
   creating: boolean;
 }> = ({ franchiseId, teams, categories, coaches, isCoach, currentUser, onClose, onCreate, creating }) => {
-  const [targetType, setTargetType] = useState<"team" | "category">(teams.length > 0 ? "team" : "category");
+  // A coach can only ever schedule a session for a team assigned to them —
+  // category-wide sessions are a manager/super_admin-only concept, so a
+  // coach's targetType is permanently "team" and the toggle is never shown.
+  const [targetType, setTargetType] = useState<"team" | "category">(
+    isCoach || teams.length > 0 ? "team" : "category",
+  );
   const [teamId, setTeamId] = useState(teams[0]?.id ?? "");
   const [category, setCategory] = useState(categories[0] ?? "");
   const selectedTeam = teams.find((t) => t.id === teamId);
@@ -521,6 +526,9 @@ const CreateSessionModal: React.FC<{
   const [location, setLocation] = useState("");
   const [fieldNumber, setFieldNumber] = useState("");
 
+  const isTeamTarget = isCoach || targetType === "team";
+  const hasNoAssignedTeams = isCoach && teams.length === 0;
+
   const handleTeamChange = (id: string) => {
     setTeamId(id);
     if (!isCoach) {
@@ -531,17 +539,18 @@ const CreateSessionModal: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (targetType === "team" && !teamId) return toast.error("Select a team");
-    if (targetType === "category" && !category) return toast.error("Select a category");
+    if (hasNoAssignedTeams) return toast.error("You have no team assigned yet — contact your manager");
+    if (isTeamTarget && !teamId) return toast.error("Select a team");
+    if (!isTeamTarget && !category) return toast.error("Select a category");
     if (!isCoach && !coachId) return toast.error("Select a coach");
     if (!location || !date || !startTime || !endTime) return toast.error("Fill in all required fields");
     if (endTime <= startTime) return toast.error("End time must be after start time");
 
     onCreate({
       franchiseId,
-      targetType,
-      teamId: targetType === "team" ? teamId : undefined,
-      category: targetType === "category" ? category : undefined,
+      targetType: isTeamTarget ? "team" : "category",
+      teamId: isTeamTarget ? teamId : undefined,
+      category: !isTeamTarget ? category : undefined,
       coachId: isCoach ? currentUser?.id : coachId,
       type,
       date,
@@ -555,44 +564,52 @@ const CreateSessionModal: React.FC<{
   return (
     <Modal isOpen onClose={onClose} title="New Session" size="md">
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-        <div>
-          <label className="block text-2xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
-            Schedule Target
-          </label>
-          <div className="flex items-center gap-1 bg-pitch-900 p-1 rounded-lg border border-white/5 w-fit">
-            {(["team", "category"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTargetType(t)}
-                className={
-                  targetType === t
-                    ? "px-3 py-1.5 rounded-md text-xs font-bold uppercase bg-volt-400 text-pitch-900 flex items-center gap-1.5"
-                    : "px-3 py-1.5 rounded-md text-xs font-bold uppercase text-slate-400 hover:text-white flex items-center gap-1.5"
-                }
-              >
-                {t === "team" ? <Users size={12} /> : <Layers size={12} />}
-                {t === "team" ? "A Team" : "Age Category"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {targetType === "team" ? (
+        {!isCoach && (
           <div>
-            <label className="block text-2xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Team</label>
-            <select
-              value={teamId}
-              onChange={(e) => handleTeamChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-pitch-900 border border-white/10 text-white focus:outline-none"
-            >
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
+            <label className="block text-2xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+              Schedule Target
+            </label>
+            <div className="flex items-center gap-1 bg-pitch-900 p-1 rounded-lg border border-white/5 w-fit">
+              {(["team", "category"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTargetType(t)}
+                  className={
+                    targetType === t
+                      ? "px-3 py-1.5 rounded-md text-xs font-bold uppercase bg-volt-400 text-pitch-900 flex items-center gap-1.5"
+                      : "px-3 py-1.5 rounded-md text-xs font-bold uppercase text-slate-400 hover:text-white flex items-center gap-1.5"
+                  }
+                >
+                  {t === "team" ? <Users size={12} /> : <Layers size={12} />}
+                  {t === "team" ? "A Team" : "Age Category"}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
+        )}
+
+        {isTeamTarget ? (
+          hasNoAssignedTeams ? (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-2xs">
+              You have no team assigned yet. Contact your manager to get a team assigned before scheduling sessions.
+            </div>
+          ) : (
+            <div>
+              <label className="block text-2xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Team</label>
+              <select
+                value={teamId}
+                onChange={(e) => handleTeamChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-pitch-900 border border-white/10 text-white focus:outline-none"
+              >
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )
         ) : (
           <div>
             <label className="block text-2xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
@@ -659,7 +676,12 @@ const CreateSessionModal: React.FC<{
         <Input label="Location / Venue" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Main Pitch" required />
         <Input label="Field Number (Optional)" value={fieldNumber} onChange={(e) => setFieldNumber(e.target.value)} placeholder="e.g. Field A" />
 
-        <Button type="submit" loading={creating} className="w-full text-xs font-semibold">
+        <Button
+          type="submit"
+          loading={creating}
+          disabled={hasNoAssignedTeams}
+          className="w-full text-xs font-semibold"
+        >
           Schedule Session
         </Button>
       </form>

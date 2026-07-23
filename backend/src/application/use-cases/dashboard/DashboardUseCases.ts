@@ -99,7 +99,7 @@ export class DashboardUseCases {
 
   async getTeamHealth(franchiseId: string) {
     if (!franchiseId) throw new BadRequestError("franchiseId is required");
-    const teams = await TeamModel.find({ franchiseId, isActive: true }).populate(
+    const teams = await TeamModel.find({ franchiseId }).populate(
       "coachId",
       "firstName lastName",
     );
