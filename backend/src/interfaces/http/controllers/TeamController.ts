@@ -37,7 +37,7 @@ export class TeamController {
       // what (if anything) was passed in the coachId query param.
       const coachId =
         req.user!.role === "coach" ? req.user!.sub : (req.query.coachId as string | undefined);
-      const teams = await this.teamUseCases.listTeams(franchiseId as string, coachId);
+      const teams = await this.teamUseCases.listTeams(franchiseId as string);
       ResponseHandler.success(res, teams, "Teams retrieved");
     } catch (err) {
       next(err);
