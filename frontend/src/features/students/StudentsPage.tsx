@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
-import { Shuffle, Users, Trash2 } from "lucide-react";
+import { Shuffle, Users, Trash2, Search, SearchX } from "lucide-react";
 import {
   Button,
   Input,
@@ -212,7 +212,7 @@ const StudentsPage: React.FC = () => {
             placeholder="Search players..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            icon={<span className="text-xs">🔍</span>}
+            icon={<Search className="h-4 w-4 text-muted-foreground" />}
           />
         </div>
         <div className="min-w-32">
@@ -293,10 +293,20 @@ const StudentsPage: React.FC = () => {
 
       {!isLoading && students.length === 0 && (
         <EmptyState
-          icon="⚽"
+          icon={<SearchX className="h-10 w-10 text-slate-600" />}
           title="No players found"
-          description={search || filterTeam || filterAge || filterStatus ? "Try adjusting your filters" : "Add your first player to get started"}
-          action={!search && !filterTeam && !filterAge && !filterStatus ? <Button onClick={() => setShowAddModal(true)}>Add Player</Button> : undefined}
+          description={
+            search || filterTeam || filterAge || filterStatus
+              ? "Try adjusting your filters"
+              : "Add your first player to get started"
+          }
+          action={
+            !search && !filterTeam && !filterAge && !filterStatus ? (
+              <Button onClick={() => setShowAddModal(true)}>
+                Add Player
+              </Button>
+            ) : undefined
+          }
         />
       )}
 

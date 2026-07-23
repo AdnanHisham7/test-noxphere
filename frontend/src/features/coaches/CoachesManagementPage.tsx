@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
-import { UserCog, Plus, KeyRound, Power } from "lucide-react";
+import { UserCog, Plus, KeyRound, Power, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Button, Input, Badge, Avatar, Modal, Skeleton, EmptyState } from "../../components/ui";
 import { useCurrentFranchiseId } from "../../hooks/useCurrentFranchiseId";
@@ -72,7 +72,12 @@ const CoachesManagementPage: React.FC = () => {
       </div>
 
       <div className="card p-4">
-        <Input placeholder="Search coaches..." value={search} onChange={(e) => setSearch(e.target.value)} icon={<span className="text-xs">🔍</span>} />
+        <Input
+          placeholder="Search coaches..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          icon={<Search className="h-4 w-4 text-muted-foreground" />}
+        />
       </div>
 
       {isLoading && (

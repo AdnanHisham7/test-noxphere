@@ -7,7 +7,9 @@ import {
 } from 'recharts';
 import { clsx } from 'clsx';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { LayoutDashboard } from 'lucide-react';
+import { Shirt, LayoutDashboard, CheckCircle2,
+  CreditCard,
+  Star, } from 'lucide-react';
 import { StatCard, Skeleton, Avatar, EmptyState } from '../../components/ui';
 import { useCurrentFranchiseId } from '../../hooks/useCurrentFranchiseId';
 import {
@@ -95,22 +97,35 @@ const DashboardPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            label="Total Students" value={stats?.totalStudents ?? 0}
+            label="Total Students"
+            value={stats?.totalStudents ?? 0}
             sublabel={`${stats?.pendingEnrollment ?? 0} pending enrollment`}
-            icon="⚽" accent="volt"
+            icon={<Shirt className="h-5 w-5" />}
+            accent="volt"
           />
+
           <StatCard
-            label="Avg Attendance" value={`${stats?.avgAttendance ?? 0}%`}
-            sublabel="This week" icon="✓" accent="field"
+            label="Avg Attendance"
+            value={`${stats?.avgAttendance ?? 0}%`}
+            sublabel="This week"
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            accent="field"
           />
+
           <StatCard
-            label="Fees Collected" value={formatCurrency(stats?.feesCollected ?? 0)}
+            label="Fees Collected"
+            value={formatCurrency(stats?.feesCollected ?? 0)}
             sublabel={`${formatCurrency(stats?.feesOutstanding ?? 0)} outstanding`}
-            icon="💳" accent="ice"
+            icon={<CreditCard className="h-5 w-5" />}
+            accent="ice"
           />
+
           <StatCard
-            label="Avg Rating" value={stats?.avgRating ?? 0}
-            sublabel="Out of 10.0" icon="⭐" accent="ember"
+            label="Avg Rating"
+            value={stats?.avgRating ?? 0}
+            sublabel="Out of 10.0"
+            icon={<Star className="h-5 w-5" />}
+            accent="ember"
           />
         </div>
       )}
