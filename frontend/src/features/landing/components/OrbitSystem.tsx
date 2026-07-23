@@ -44,6 +44,7 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
   className = "",
 }) => {
   const showLabels = variant === "hero";
+  const LOGO_SIZE = 96; // Adjust size as needed to fit your logo bounds
 
   return (
     <svg
@@ -75,11 +76,7 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
             animation: nox-spin 35s linear infinite;
           }
         `}</style>
-        <radialGradient id="nox-core-grad" cx="50%" cy="45%" r="60%">
-          <stop offset="0%" stopColor="#e0ff66" />
-          <stop offset="55%" stopColor="#ccff00" />
-          <stop offset="100%" stopColor="#99cc00" />
-        </radialGradient>
+
         <radialGradient id="nox-core-halo" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ccff00" stopOpacity="0.35" />
           <stop offset="100%" stopColor="#ccff00" stopOpacity="0" />
@@ -133,7 +130,7 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
                 strokeOpacity="0.35"
               />
 
-              {/* Label group counter-rotates around dot center (p.x, p.y) */}
+              {/* Label group counter-rotates around dot center */}
               {showLabels && (
                 <g
                   className="animate-counter-slow"
@@ -181,7 +178,7 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
                 strokeOpacity="0.3"
               />
 
-              {/* Label group counter-rotates around dot center (p.x, p.y) */}
+              {/* Label group counter-rotates around dot center */}
               {showLabels && (
                 <g
                   className="animate-counter-reverse"
@@ -209,33 +206,17 @@ export const OrbitSystem: React.FC<OrbitSystemProps> = ({
         })}
       </g>
 
-      {/* Center Core */}
-      <circle
-        cx={CENTER}
-        cy={CENTER}
-        r={54}
-        fill="url(#nox-core-grad)"
-        className="animate-core-pulse"
-        style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
-      />
-      <circle
-        cx={CENTER}
-        cy={CENTER}
-        r={54}
-        fill="none"
-        stroke="#0a0a0f"
-        strokeWidth="2"
-      />
-
-      {/* Center Logo */}
+      {/* Center Logo (Replaces the background core circle completely) */}
       {logoSrc && (
         <image
           href={logoSrc}
-          x={CENTER - 32}
-          y={CENTER - 32}
-          width={64}
-          height={64}
+          x={CENTER - LOGO_SIZE / 2}
+          y={CENTER - LOGO_SIZE / 2}
+          width={LOGO_SIZE}
+          height={LOGO_SIZE}
           preserveAspectRatio="xMidYMid meet"
+          className="animate-core-pulse"
+          style={{ transformOrigin: `${CENTER}px ${CENTER}px` }}
         />
       )}
     </svg>

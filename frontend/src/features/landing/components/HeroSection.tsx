@@ -2,7 +2,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import OrbitSystem from "./OrbitSystem";
-import logoSrc from "@/assets/logo-transparent.png";
+import logoSrc from "@/assets/logo.png";
 
 export const HeroSection: React.FC = () => {
   return (
